@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Aurumm Studio — CRM & Content Management System',
-  description: 'Manage website content, images, and consultation leads for Aurumm',
+  title: 'Aurumm — Website Content Studio',
+  description: 'Manage website copy, collections, gemstones, and luxury photography for Aurumm',
 };
 
 export default function RootLayout({

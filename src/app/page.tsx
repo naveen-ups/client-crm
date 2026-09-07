@@ -1,280 +1,1552 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
+import React, { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import {
-  Users,
-  FileText,
   Sparkles,
-  ArrowRight,
-  TrendingUp,
-  Clock,
-  CheckCircle2,
-  Calendar,
+  Save,
   Layers,
-  Gem,
+  Image as ImageIcon,
+  CheckCircle2,
+  AlertCircle,
+  Plus,
+  Trash2,
   ExternalLink,
+  RotateCcw,
 } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
-import { INITIAL_DEMO_LEADS } from '@/lib/default-content';
-import { Lead } from '@/types';
+import { ImageUploader } from '@/components/ui/ImageUploader';
+import {
+  DEFAULT_COLLECTIONS,
+  DEFAULT_CUSTOM_CATEGORIES,
+  DEFAULT_GEMSTONES,
+  DEFAULT_PLANS,
+  DEFAULT_SITE_SECTIONS,
+  DEFAULT_TESTIMONIALS,
+} from '@/lib/default-content';
+import {
+  CollectionItem,
+  CustomCategoryItem,
+  GemstoneItem,
+  PlanItem,
+  SiteSectionContent,
+  TestimonialItem,
+} from '@/types';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase/client';
 
-export default function DashboardPage() {
-  const [leads, setLeads] = useState<Lead[]>(INITIAL_DEMO_LEADS);
-  const [loading, setLoading] = useState(true);
+const SECTIONS_NAV = [
+  { id: 'hero', label: '1. Hero Spotlight', short: 'Hero' },
+  { id: 'collections', label: '2. Shop Collections', short: 'Collections' },
+  { id: 'philosophy', label: '3. Brand Philosophy', short: 'Philosophy' },
+  { id: 'founder', label: '4. Meet The Founder', short: 'Founder' },
+  { id: 'custom', label: '5. Custom Jewellery', short: 'Custom' },
+  { id: 'heritage', label: '6. Heritage Redesign', short: 'Heritage' },
+  { id: 'gemstones', label: '7. Gemstones Showcase', short: 'Gemstones' },
+  { id: 'testimonials', label: '8. Client Testimonials', short: 'Stories' },
+  { id: 'plans', label: '9. Consultation Plans', short: 'Plans' },
+  { id: 'footer', label: '10. Footer & Contact', short: 'Footer' },
+];
+
+function ContentStudio() {
+  const searchParams = useSearchParams();
+  const sectionQuery = searchParams.get('section');
+  const [activeTab, setActiveTab] = useState('hero');
 
   useEffect(() => {
-    async function loadData() {
-      if (isSupabaseConfigured()) {
-        try {
-          const { data, error } = await supabase
-            .from('leads')
-            .select('*')
-            .order('created_at', { ascending: false })
-            .limit(5);
-
-          if (!error && data && data.length > 0) {
-            setLeads(data);
-          }
-        } catch (e) {
-          console.error('Error fetching leads from Supabase:', e);
-        }
-      }
-      setLoading(false);
+    if (sectionQuery && SECTIONS_NAV.some((s) => s.id === sectionQuery)) {
+      setActiveTab(sectionQuery);
     }
-    loadData();
+  }, [sectionQuery]);
+
+  const handleTabChange = (tabId: string) => {
+    setActiveTab(tabId);
+    window.history.pushState(null, '', `/?section=${tabId}`);
+  };
+  const [sections, setSections] = useState<Record<string, SiteSectionContent>>(
+    DEFAULT_SITE_SECTIONS
+  );
+  const [collections, setCollections] =
+    useState<CollectionItem[]>(DEFAULT_COLLECTIONS);
+  const [customCategories, setCustomCategories] = useState<
+    CustomCategoryItem[]
+  >(DEFAULT_CUSTOM_CATEGORIES);
+  const [gemstones, setGemstones] =
+    useState<GemstoneItem[]>(DEFAULT_GEMSTONES);
+  const [testimonials, setTestimonials] =
+    useState<TestimonialItem[]>(DEFAULT_TESTIMONIALS);
+  const [plans, setPlans] = useState<PlanItem[]>(DEFAULT_PLANS);
+
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  // Load from Supabase if configured
+  useEffect(() => {
+    async function loadRemoteContent() {
+      if (!isSupabaseConfigured()) return;
+
+      try {
+        const [
+          secRes,
+          colRes,
+          custRes,
+          gemRes,
+          testRes,
+          planRes,
+        ] = await Promise.all([
+          supabase.from('site_content').select('*'),
+          supabase.from('collections').select('*').order('sort_order'),
+          supabase.from('custom_categories').select('*').order('sort_order'),
+          supabase.from('gemstones').select('*').order('sort_order'),
+          supabase.from('testimonials').select('*').order('sort_order'),
+          supabase.from('plans').select('*').order('sort_order'),
+        ]);
+
+        if (secRes.data && secRes.data.length > 0) {
+          const map = { ...DEFAULT_SITE_SECTIONS };
+          secRes.data.forEach((s) => {
+            map[s.id] = s;
+          });
+          setSections(map);
+        }
+        if (colRes.data && colRes.data.length > 0) setCollections(colRes.data);
+        if (custRes.data && custRes.data.length > 0)
+          setCustomCategories(custRes.data);
+        if (gemRes.data && gemRes.data.length > 0) setGemstones(gemRes.data);
+        if (testRes.data && testRes.data.length > 0)
+          setTestimonials(testRes.data);
+        if (planRes.data && planRes.data.length > 0) setPlans(planRes.data);
+      } catch (err) {
+        console.error('Error fetching Supabase content:', err);
+      }
+    }
+    loadRemoteContent();
   }, []);
 
-  const newLeadsCount = leads.filter((l) => l.status === 'new').length;
-  const contactedCount = leads.filter((l) => l.status === 'contacted').length;
-  const scheduledCount = leads.filter((l) => l.status === 'scheduled').length;
+  const handleSaveSection = async (sectionId: string) => {
+    setIsSaving(true);
+    setSaveSuccess(null);
+    setSaveError(null);
+
+    try {
+      if (isSupabaseConfigured()) {
+        const sectionData = sections[sectionId];
+        const { error } = await supabase
+          .from('site_content')
+          .upsert({
+            id: sectionId,
+            section_name: sectionData.section_name,
+            title: sectionData.title,
+            subtitle: sectionData.subtitle,
+            description: sectionData.description,
+            image_url: sectionData.image_url,
+            data: sectionData.data,
+            updated_at: new Date().toISOString(),
+          });
+
+        if (error) throw error;
+      }
+
+      setSaveSuccess(
+        `Changes saved for ${sections[sectionId]?.section_name || sectionId}!`
+      );
+    } catch (err: any) {
+      console.error(err);
+      setSaveError(err.message || 'Failed to save changes.');
+    } finally {
+      setIsSaving(false);
+      setTimeout(() => setSaveSuccess(null), 4000);
+    }
+  };
+
+  const handleSaveCollections = async () => {
+    setIsSaving(true);
+    setSaveSuccess(null);
+    try {
+      if (isSupabaseConfigured()) {
+        for (const col of collections) {
+          await supabase.from('collections').upsert({
+            ...col,
+            updated_at: new Date().toISOString(),
+          });
+        }
+      }
+      setSaveSuccess('Shop Collections saved successfully!');
+    } catch (err: any) {
+      setSaveError(err.message || 'Failed to save collections.');
+    } finally {
+      setIsSaving(false);
+      setTimeout(() => setSaveSuccess(null), 4000);
+    }
+  };
+
+  const handleSaveCustomCategories = async () => {
+    setIsSaving(true);
+    setSaveSuccess(null);
+    try {
+      if (isSupabaseConfigured()) {
+        for (const cat of customCategories) {
+          await supabase.from('custom_categories').upsert({
+            ...cat,
+            updated_at: new Date().toISOString(),
+          });
+        }
+      }
+      setSaveSuccess('Custom Jewellery categories saved!');
+    } catch (err: any) {
+      setSaveError(err.message);
+    } finally {
+      setIsSaving(false);
+      setTimeout(() => setSaveSuccess(null), 4000);
+    }
+  };
+
+  const handleSaveGemstones = async () => {
+    setIsSaving(true);
+    setSaveSuccess(null);
+    try {
+      if (isSupabaseConfigured()) {
+        for (const gem of gemstones) {
+          await supabase.from('gemstones').upsert({
+            ...gem,
+            updated_at: new Date().toISOString(),
+          });
+        }
+      }
+      setSaveSuccess('Gemstones showcase saved!');
+    } catch (err: any) {
+      setSaveError(err.message);
+    } finally {
+      setIsSaving(false);
+      setTimeout(() => setSaveSuccess(null), 4000);
+    }
+  };
+
+  const handleSaveTestimonials = async () => {
+    setIsSaving(true);
+    setSaveSuccess(null);
+    try {
+      if (isSupabaseConfigured()) {
+        for (const t of testimonials) {
+          await supabase.from('testimonials').upsert({
+            ...t,
+            updated_at: new Date().toISOString(),
+          });
+        }
+      }
+      setSaveSuccess('Client Testimonials saved!');
+    } catch (err: any) {
+      setSaveError(err.message);
+    } finally {
+      setIsSaving(false);
+      setTimeout(() => setSaveSuccess(null), 4000);
+    }
+  };
+
+  const handleSavePlans = async () => {
+    setIsSaving(true);
+    setSaveSuccess(null);
+    try {
+      if (isSupabaseConfigured()) {
+        for (const p of plans) {
+          await supabase.from('plans').upsert({
+            ...p,
+            updated_at: new Date().toISOString(),
+          });
+        }
+      }
+      setSaveSuccess('Consultation Plans saved!');
+    } catch (err: any) {
+      setSaveError(err.message);
+    } finally {
+      setIsSaving(false);
+      setTimeout(() => setSaveSuccess(null), 4000);
+    }
+  };
 
   return (
     <div className="flex-1 flex flex-col">
       <Header
-        title="Aurumm Executive Dashboard"
-        subtitle="Overview of bespoke consultation requests and live website content"
+        title="Website Content & Media Studio"
+        subtitle="Manage copy, collections, and luxury photography for the Aurumm storefront"
         action={
-          <Link
-            href="/content"
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-gradient-to-r from-[#b8952a] via-[#d4af37] to-[#f0d060] text-black shadow-lg shadow-[#d4af37]/20 hover:opacity-95 transition-opacity"
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>Manage Website Content</span>
-          </Link>
+          <div className="flex items-center gap-2">
+            <a
+              href="http://localhost:5173"
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium bg-neutral-900 border border-neutral-800 text-neutral-300 hover:text-white transition-colors"
+            >
+              <span>Preview Website</span>
+              <ExternalLink className="w-3.5 h-3.5 text-[#d4af37]" />
+            </a>
+          </div>
         }
       />
 
-      <main className="p-8 space-y-8 max-w-7xl w-full mx-auto">
-        {/* Metric Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-          {/* Card 1 */}
-          <div className="p-5 rounded-2xl bg-neutral-900/60 border border-neutral-800/80 hover:border-[#d4af37]/40 transition-colors relative overflow-hidden group">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-[#d4af37]/5 rounded-full blur-2xl group-hover:bg-[#d4af37]/10 transition-all"></div>
-            <div className="flex items-center justify-between text-neutral-400 mb-3">
-              <span className="text-xs font-medium uppercase tracking-wider">
-                Total Inquiries
-              </span>
-              <div className="p-2 rounded-xl bg-neutral-800/80 text-[#d4af37]">
-                <Users className="w-4 h-4" />
-              </div>
-            </div>
-            <div className="text-3xl font-semibold text-white font-serif">
-              {leads.length}
-            </div>
-            <div className="flex items-center gap-1.5 text-xs text-emerald-400 mt-2">
-              <TrendingUp className="w-3 h-3" />
-              <span>{newLeadsCount} new this week</span>
-            </div>
-          </div>
+      {/* Save alerts */}
+      {saveSuccess && (
+        <div className="mx-8 mt-6 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-medium flex items-center gap-2 animate-fade-in">
+          <CheckCircle2 className="w-4 h-4" />
+          <span>{saveSuccess}</span>
+        </div>
+      )}
 
-          {/* Card 2 */}
-          <div className="p-5 rounded-2xl bg-neutral-900/60 border border-neutral-800/80 hover:border-[#d4af37]/40 transition-colors relative overflow-hidden group">
-            <div className="flex items-center justify-between text-neutral-400 mb-3">
-              <span className="text-xs font-medium uppercase tracking-wider">
-                Action Required
-              </span>
-              <div className="p-2 rounded-xl bg-amber-500/10 text-amber-400">
-                <Clock className="w-4 h-4" />
-              </div>
-            </div>
-            <div className="text-3xl font-semibold text-amber-400 font-serif">
-              {newLeadsCount}
-            </div>
-            <p className="text-xs text-neutral-500 mt-2">
-              Awaiting consultant response
-            </p>
-          </div>
+      {saveError && (
+        <div className="mx-8 mt-6 p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-medium flex items-center gap-2 animate-fade-in">
+          <AlertCircle className="w-4 h-4" />
+          <span>{saveError}</span>
+        </div>
+      )}
 
-          {/* Card 3 */}
-          <div className="p-5 rounded-2xl bg-neutral-900/60 border border-neutral-800/80 hover:border-[#d4af37]/40 transition-colors relative overflow-hidden group">
-            <div className="flex items-center justify-between text-neutral-400 mb-3">
-              <span className="text-xs font-medium uppercase tracking-wider">
-                Scheduled Consultations
-              </span>
-              <div className="p-2 rounded-xl bg-purple-500/10 text-purple-400">
-                <Calendar className="w-4 h-4" />
-              </div>
-            </div>
-            <div className="text-3xl font-semibold text-purple-300 font-serif">
-              {scheduledCount}
-            </div>
-            <p className="text-xs text-neutral-500 mt-2">Studio & virtual appointments</p>
-          </div>
-
-          {/* Card 4 */}
-          <div className="p-5 rounded-2xl bg-neutral-900/60 border border-neutral-800/80 hover:border-[#d4af37]/40 transition-colors relative overflow-hidden group">
-            <div className="flex items-center justify-between text-neutral-400 mb-3">
-              <span className="text-xs font-medium uppercase tracking-wider">
-                Managed Content
-              </span>
-              <div className="p-2 rounded-xl bg-[#d4af37]/10 text-[#d4af37]">
-                <Layers className="w-4 h-4" />
-              </div>
-            </div>
-            <div className="text-3xl font-semibold text-[#f5e6a3] font-serif">
-              10 Sections
-            </div>
-            <p className="text-xs text-neutral-500 mt-2">
-              Hero, Gems, Founder, Collections, etc.
-            </p>
-          </div>
+      <div className="p-8 max-w-6xl w-full mx-auto space-y-6">
+        {/* Horizontal Quick-Jump Section Navigation */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-thin">
+          {SECTIONS_NAV.map((sec) => (
+            <button
+              key={sec.id}
+              type="button"
+              onClick={() => handleTabChange(sec.id)}
+              className={`px-4 py-2 rounded-xl text-xs font-medium whitespace-nowrap transition-all shrink-0 ${
+                activeTab === sec.id
+                  ? 'bg-gradient-to-r from-[#d4af37] to-[#b8952a] text-black font-semibold shadow-md shadow-[#d4af37]/20'
+                  : 'bg-neutral-900/80 text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/80 border border-neutral-800/60'
+              }`}
+            >
+              <span>{sec.label}</span>
+            </button>
+          ))}
         </div>
 
-        {/* Content Management Quick Access */}
-        <div className="p-6 rounded-2xl bg-neutral-900/40 border border-neutral-800/80">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h3 className="text-base font-semibold text-white flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-[#d4af37]" />
-                Website Content & Image CMS
-              </h3>
-              <p className="text-xs text-neutral-400 mt-0.5">
-                Update texts, titles, and upload images for any section in the frontend repository
-              </p>
-            </div>
-            <Link
-              href="/content"
-              className="text-xs font-medium text-[#d4af37] hover:text-[#f5e6a3] flex items-center gap-1 transition-colors"
-            >
-              <span>View all sections</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-            {[
-              { id: 'hero', name: 'Hero Section', desc: 'Title & Spotlight' },
-              { id: 'collections', name: 'Collections', desc: 'Shop Grid Items' },
-              { id: 'philosophy', name: 'Philosophy', desc: 'Story & Stats' },
-              { id: 'founder', name: 'Founder', desc: 'Portrait & Bio' },
-              { id: 'heritage', name: 'Heritage', desc: 'Before/After Slider' },
-              { id: 'gemstones', name: 'Gemstones', desc: 'Gems & Planets' },
-            ].map((section) => (
-              <Link
-                key={section.id}
-                href={`/content?section=${section.id}`}
-                className="p-3.5 rounded-xl bg-neutral-950/70 border border-neutral-800/80 hover:border-[#d4af37]/50 hover:bg-neutral-900/80 transition-all text-left group"
-              >
-                <div className="text-xs font-semibold text-neutral-200 group-hover:text-[#f5e6a3] transition-colors">
-                  {section.name}
+        {/* Editor Pane */}
+        <div className="bg-neutral-900/50 border border-neutral-800/80 rounded-2xl p-6 sm:p-8 space-y-8">
+          {/* ================= SECTION 1: HERO ================= */}
+          {activeTab === 'hero' && (
+            <div className="space-y-6">
+              <div className="border-b border-neutral-800 pb-4 flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-serif font-semibold text-white">
+                    Hero Section
+                  </h3>
+                  <p className="text-xs text-neutral-400 mt-1">
+                    First luxury impression visible when visitors load the Aurumm landing page
+                  </p>
                 </div>
-                <div className="text-[11px] text-neutral-500 mt-1">
-                  {section.desc}
+                <button
+                  onClick={() => handleSaveSection('hero')}
+                  disabled={isSaving}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-[#d4af37] text-black hover:bg-[#b8952a] transition-colors"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>{isSaving ? 'Publishing...' : 'Publish Changes'}</span>
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-medium text-neutral-300 block mb-1">
+                    Heading Line 1 (White uppercase)
+                  </label>
+                  <input
+                    type="text"
+                    value={sections.hero.data?.heading_line1 || ''}
+                    onChange={(e) =>
+                      setSections({
+                        ...sections,
+                        hero: {
+                          ...sections.hero,
+                          data: {
+                            ...sections.hero.data,
+                            heading_line1: e.target.value,
+                          },
+                        },
+                      })
+                    }
+                    className="w-full px-3 py-2 text-xs bg-neutral-950 border border-neutral-800 rounded-xl text-white focus:border-[#d4af37] focus:outline-none"
+                  />
                 </div>
-              </Link>
-            ))}
-          </div>
-        </div>
+                <div>
+                  <label className="text-xs font-medium text-[#d4af37] block mb-1">
+                    Heading Line 2 (Gold accent)
+                  </label>
+                  <input
+                    type="text"
+                    value={sections.hero.data?.heading_line2 || ''}
+                    onChange={(e) =>
+                      setSections({
+                        ...sections,
+                        hero: {
+                          ...sections.hero,
+                          data: {
+                            ...sections.hero.data,
+                            heading_line2: e.target.value,
+                          },
+                        },
+                      })
+                    }
+                    className="w-full px-3 py-2 text-xs bg-neutral-950 border border-neutral-800 rounded-xl text-white focus:border-[#d4af37] focus:outline-none"
+                  />
+                </div>
+              </div>
 
-        {/* Recent Consultation Requests */}
-        <div className="p-6 rounded-2xl bg-neutral-900/40 border border-neutral-800/80">
-          <div className="flex items-center justify-between mb-5">
-            <div>
-              <h3 className="text-base font-semibold text-white flex items-center gap-2">
-                <Users className="w-4 h-4 text-[#d4af37]" />
-                Recent Consultation Leads
-              </h3>
-              <p className="text-xs text-neutral-400 mt-0.5">
-                Submissions from the Aurumm website booking form
-              </p>
+              <div>
+                <label className="text-xs font-medium text-neutral-300 block mb-1">
+                  Description / Philosophy Hook
+                </label>
+                <textarea
+                  rows={3}
+                  value={sections.hero.description || ''}
+                  onChange={(e) =>
+                    setSections({
+                      ...sections,
+                      hero: { ...sections.hero, description: e.target.value },
+                    })
+                  }
+                  className="w-full px-3 py-2 text-xs bg-neutral-950 border border-neutral-800 rounded-xl text-white focus:border-[#d4af37] focus:outline-none leading-relaxed"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-medium text-neutral-300 block mb-1">
+                    Primary CTA Button Text
+                  </label>
+                  <input
+                    type="text"
+                    value={sections.hero.data?.cta1_label || ''}
+                    onChange={(e) =>
+                      setSections({
+                        ...sections,
+                        hero: {
+                          ...sections.hero,
+                          data: {
+                            ...sections.hero.data,
+                            cta1_label: e.target.value,
+                          },
+                        },
+                      })
+                    }
+                    className="w-full px-3 py-2 text-xs bg-neutral-950 border border-neutral-800 rounded-xl text-white focus:border-[#d4af37] focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-neutral-300 block mb-1">
+                    Secondary CTA Button Text
+                  </label>
+                  <input
+                    type="text"
+                    value={sections.hero.data?.cta2_label || ''}
+                    onChange={(e) =>
+                      setSections({
+                        ...sections,
+                        hero: {
+                          ...sections.hero,
+                          data: {
+                            ...sections.hero.data,
+                            cta2_label: e.target.value,
+                          },
+                        },
+                      })
+                    }
+                    className="w-full px-3 py-2 text-xs bg-neutral-950 border border-neutral-800 rounded-xl text-white focus:border-[#d4af37] focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <ImageUploader
+                label="Hero Background / Ambient Visual"
+                value={sections.hero.image_url || ''}
+                onChange={(url) =>
+                  setSections({
+                    ...sections,
+                    hero: { ...sections.hero, image_url: url },
+                  })
+                }
+                folder="hero"
+              />
             </div>
-            <Link
-              href="/leads"
-              className="text-xs font-medium text-[#d4af37] hover:text-[#f5e6a3] flex items-center gap-1 transition-colors"
-            >
-              <span>Manage all leads</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
-          </div>
+          )}
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="text-[11px] uppercase tracking-wider text-neutral-500 border-b border-neutral-800">
-                <tr>
-                  <th className="pb-3 font-medium">Client</th>
-                  <th className="pb-3 font-medium">Contact</th>
-                  <th className="pb-3 font-medium">Interest / Gem</th>
-                  <th className="pb-3 font-medium">Status</th>
-                  <th className="pb-3 font-medium text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-neutral-800/60">
-                {leads.map((lead) => (
-                  <tr key={lead.id} className="hover:bg-neutral-800/20 transition-colors">
-                    <td className="py-3.5 pr-4">
-                      <div className="font-medium text-neutral-200">{lead.name}</div>
-                      <div className="text-[11px] text-neutral-500 truncate max-w-xs">
-                        {lead.message || 'No custom notes provided'}
-                      </div>
-                    </td>
-                    <td className="py-3.5 pr-4 text-xs text-neutral-400">
-                      <div>{lead.email}</div>
-                      <div className="text-neutral-500 font-mono text-[11px] mt-0.5">
-                        {lead.phone}
-                      </div>
-                    </td>
-                    <td className="py-3.5 pr-4 text-xs text-neutral-300">
-                      {lead.preferred_gemstone ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-neutral-800 text-neutral-200 text-xs">
-                          <Gem className="w-3 h-3 text-[#d4af37]" />
-                          {lead.preferred_gemstone}
-                        </span>
-                      ) : (
-                        <span className="text-neutral-500 text-xs">General Inquiry</span>
-                      )}
-                    </td>
-                    <td className="py-3.5 pr-4">
-                      <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium capitalize ${
-                          lead.status === 'new'
-                            ? 'bg-amber-500/10 text-amber-400 border border-amber-500/30'
-                            : lead.status === 'scheduled'
-                            ? 'bg-purple-500/10 text-purple-400 border border-purple-500/30'
-                            : lead.status === 'contacted'
-                            ? 'bg-blue-500/10 text-blue-400 border border-blue-500/30'
-                            : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
-                        }`}
-                      >
-                        {lead.status}
+          {/* ================= SECTION 2: COLLECTIONS (SHOP GRID) ================= */}
+          {activeTab === 'collections' && (
+            <div className="space-y-6">
+              <div className="border-b border-neutral-800 pb-4 flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-serif font-semibold text-white">
+                    Shop Collections
+                  </h3>
+                  <p className="text-xs text-neutral-400 mt-1">
+                    Luxury collection tiles rendered in the ShopGrid section
+                  </p>
+                </div>
+                <button
+                  onClick={handleSaveCollections}
+                  disabled={isSaving}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-[#d4af37] text-black hover:bg-[#b8952a] transition-colors"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>{isSaving ? 'Saving...' : 'Save Collections'}</span>
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                {collections.map((col, index) => (
+                  <div
+                    key={col.id}
+                    className="p-4 rounded-xl bg-neutral-950/80 border border-neutral-800 space-y-4"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-[#d4af37]">
+                        Collection Item #{index + 1}
                       </span>
-                    </td>
-                    <td className="py-3.5 text-right">
-                      <Link
-                        href={`/leads?id=${lead.id}`}
-                        className="text-xs font-medium text-[#d4af37] hover:underline"
+                      <button
+                        onClick={() =>
+                          setCollections(
+                            collections.filter((_, i) => i !== index)
+                          )
+                        }
+                        className="text-neutral-500 hover:text-red-400 p-1"
                       >
-                        View Details
-                      </Link>
-                    </td>
-                  </tr>
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div>
+                        <label className="text-[11px] text-neutral-400 font-medium block mb-1">
+                          Collection Title
+                        </label>
+                        <input
+                          type="text"
+                          value={col.title}
+                          onChange={(e) => {
+                            const updated = [...collections];
+                            updated[index].title = e.target.value;
+                            setCollections(updated);
+                          }}
+                          className="w-full px-3 py-2 text-xs bg-neutral-900 border border-neutral-800 rounded-lg text-white focus:border-[#d4af37] focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[11px] text-neutral-400 font-medium block mb-1">
+                          Collection Badge
+                        </label>
+                        <input
+                          type="text"
+                          value={col.badge || ''}
+                          onChange={(e) => {
+                            const updated = [...collections];
+                            updated[index].badge = e.target.value;
+                            setCollections(updated);
+                          }}
+                          className="w-full px-3 py-2 text-xs bg-neutral-900 border border-neutral-800 rounded-lg text-white focus:border-[#d4af37] focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[11px] text-neutral-400 font-medium block mb-1">
+                          Target Anchor Link
+                        </label>
+                        <input
+                          type="text"
+                          value={col.link || '#custom'}
+                          onChange={(e) => {
+                            const updated = [...collections];
+                            updated[index].link = e.target.value;
+                            setCollections(updated);
+                          }}
+                          className="w-full px-3 py-2 text-xs bg-neutral-900 border border-neutral-800 rounded-lg text-white focus:border-[#d4af37] focus:outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-[11px] text-neutral-400 font-medium block mb-1">
+                        Short Description
+                      </label>
+                      <input
+                        type="text"
+                        value={col.description}
+                        onChange={(e) => {
+                          const updated = [...collections];
+                          updated[index].description = e.target.value;
+                          setCollections(updated);
+                        }}
+                        className="w-full px-3 py-2 text-xs bg-neutral-900 border border-neutral-800 rounded-lg text-white focus:border-[#d4af37] focus:outline-none"
+                      />
+                    </div>
+
+                    <ImageUploader
+                      label={`Image for "${col.title}"`}
+                      value={col.image_url}
+                      onChange={(url) => {
+                        const updated = [...collections];
+                        updated[index].image_url = url;
+                        setCollections(updated);
+                      }}
+                      folder="collections"
+                    />
+                  </div>
                 ))}
-              </tbody>
-            </table>
+
+                <button
+                  onClick={() =>
+                    setCollections([
+                      ...collections,
+                      {
+                        id: 'col-' + Date.now(),
+                        title: 'New Jewellery Line',
+                        description: 'Handcrafted luxury piece in 18k solid gold.',
+                        badge: 'New Arrival',
+                        link: '#custom',
+                        image_url: '/Engagement Rings.png',
+                        sort_order: collections.length + 1,
+                        is_active: true,
+                      },
+                    ])
+                  }
+                  className="w-full py-3 rounded-xl border border-dashed border-neutral-800 hover:border-[#d4af37]/60 text-neutral-400 hover:text-[#d4af37] text-xs font-semibold flex items-center justify-center gap-2 transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Add Collection Card</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ================= SECTION 3: PHILOSOPHY ================= */}
+          {activeTab === 'philosophy' && (
+            <div className="space-y-6">
+              <div className="border-b border-neutral-800 pb-4 flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-serif font-semibold text-white">
+                    Brand Philosophy Section
+                  </h3>
+                  <p className="text-xs text-neutral-400 mt-1">
+                    Story, core values, and luxury credibility metrics
+                  </p>
+                </div>
+                <button
+                  onClick={() => handleSaveSection('philosophy')}
+                  disabled={isSaving}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-[#d4af37] text-black hover:bg-[#b8952a] transition-colors"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>{isSaving ? 'Publishing...' : 'Publish Changes'}</span>
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-medium text-neutral-300 block mb-1">
+                    Eyebrow / Subtitle
+                  </label>
+                  <input
+                    type="text"
+                    value={sections.philosophy.subtitle || ''}
+                    onChange={(e) =>
+                      setSections({
+                        ...sections,
+                        philosophy: {
+                          ...sections.philosophy,
+                          subtitle: e.target.value,
+                        },
+                      })
+                    }
+                    className="w-full px-3 py-2 text-xs bg-neutral-950 border border-neutral-800 rounded-xl text-white focus:border-[#d4af37] focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-neutral-300 block mb-1">
+                    Section Heading
+                  </label>
+                  <input
+                    type="text"
+                    value={sections.philosophy.title || ''}
+                    onChange={(e) =>
+                      setSections({
+                        ...sections,
+                        philosophy: {
+                          ...sections.philosophy,
+                          title: e.target.value,
+                        },
+                      })
+                    }
+                    className="w-full px-3 py-2 text-xs bg-neutral-950 border border-neutral-800 rounded-xl text-white focus:border-[#d4af37] focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-medium text-neutral-300 block mb-1">
+                  Philosophy Paragraph
+                </label>
+                <textarea
+                  rows={4}
+                  value={sections.philosophy.description || ''}
+                  onChange={(e) =>
+                    setSections({
+                      ...sections,
+                      philosophy: {
+                        ...sections.philosophy,
+                        description: e.target.value,
+                      },
+                    })
+                  }
+                  className="w-full px-3 py-2 text-xs bg-neutral-950 border border-neutral-800 rounded-xl text-white focus:border-[#d4af37] focus:outline-none leading-relaxed"
+                />
+              </div>
+
+              <ImageUploader
+                label="Philosophy Feature 3D Frame Image"
+                value={sections.philosophy.image_url || ''}
+                onChange={(url) =>
+                  setSections({
+                    ...sections,
+                    philosophy: { ...sections.philosophy, image_url: url },
+                  })
+                }
+                folder="philosophy"
+              />
+
+              {/* Stats cards editor */}
+              <div>
+                <label className="text-xs font-medium text-[#d4af37] block mb-2">
+                  Statistics Highlight Cards
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {(sections.philosophy.data?.stats || []).map(
+                    (stat: any, index: number) => (
+                      <div
+                        key={index}
+                        className="p-3 bg-neutral-950 border border-neutral-800 rounded-xl space-y-2"
+                      >
+                        <input
+                          type="text"
+                          value={stat.value}
+                          placeholder="500+"
+                          onChange={(e) => {
+                            const currentStats = sections.philosophy.data?.stats || [];
+                            const newStats = [...currentStats];
+                            newStats[index] = { ...newStats[index], value: e.target.value };
+                            setSections({
+                              ...sections,
+                              philosophy: {
+                                ...sections.philosophy,
+                                data: {
+                                  ...(sections.philosophy.data || {}),
+                                  stats: newStats,
+                                },
+                              },
+                            });
+                          }}
+                          className="w-full px-2 py-1 text-sm font-semibold bg-neutral-900 border border-neutral-800 rounded text-[#d4af37] text-center"
+                        />
+                        <input
+                          type="text"
+                          value={stat.label}
+                          placeholder="Label"
+                          onChange={(e) => {
+                            const currentStats = sections.philosophy.data?.stats || [];
+                            const newStats = [...currentStats];
+                            newStats[index] = { ...newStats[index], label: e.target.value };
+                            setSections({
+                              ...sections,
+                              philosophy: {
+                                ...sections.philosophy,
+                                data: {
+                                  ...(sections.philosophy.data || {}),
+                                  stats: newStats,
+                                },
+                              },
+                            });
+                          }}
+                          className="w-full px-2 py-1 text-[11px] bg-neutral-900 border border-neutral-800 rounded text-neutral-300 text-center"
+                        />
+                      </div>
+                    )
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ================= SECTION 4: FOUNDER ================= */}
+          {activeTab === 'founder' && (
+            <div className="space-y-6">
+              <div className="border-b border-neutral-800 pb-4 flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-serif font-semibold text-white">
+                    Meet The Founder
+                  </h3>
+                  <p className="text-xs text-neutral-400 mt-1">
+                    Founder portrait, background bio, and gemstone certifications
+                  </p>
+                </div>
+                <button
+                  onClick={() => handleSaveSection('founder')}
+                  disabled={isSaving}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-[#d4af37] text-black hover:bg-[#b8952a] transition-colors"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>{isSaving ? 'Publishing...' : 'Publish Changes'}</span>
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-medium text-neutral-300 block mb-1">
+                    Founder Full Name
+                  </label>
+                  <input
+                    type="text"
+                    value={sections.founder.data?.founder_name || ''}
+                    onChange={(e) =>
+                      setSections({
+                        ...sections,
+                        founder: {
+                          ...sections.founder,
+                          data: {
+                            ...sections.founder.data,
+                            founder_name: e.target.value,
+                          },
+                        },
+                      })
+                    }
+                    className="w-full px-3 py-2 text-xs bg-neutral-950 border border-neutral-800 rounded-xl text-white focus:border-[#d4af37] focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-[#d4af37] block mb-1">
+                    Professional Title
+                  </label>
+                  <input
+                    type="text"
+                    value={sections.founder.data?.founder_title || ''}
+                    onChange={(e) =>
+                      setSections({
+                        ...sections,
+                        founder: {
+                          ...sections.founder,
+                          data: {
+                            ...sections.founder.data,
+                            founder_title: e.target.value,
+                          },
+                        },
+                      })
+                    }
+                    className="w-full px-3 py-2 text-xs bg-neutral-950 border border-neutral-800 rounded-xl text-white focus:border-[#d4af37] focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-medium text-neutral-300 block mb-1">
+                  Signature Quote
+                </label>
+                <input
+                  type="text"
+                  value={sections.founder.data?.quote || ''}
+                  onChange={(e) =>
+                    setSections({
+                      ...sections,
+                      founder: {
+                        ...sections.founder,
+                        data: {
+                          ...sections.founder.data,
+                          quote: e.target.value,
+                        },
+                      },
+                    })
+                  }
+                  className="w-full px-3 py-2 text-xs bg-neutral-950 border border-neutral-800 rounded-xl text-white focus:border-[#d4af37] focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-medium text-neutral-300 block mb-1">
+                  Founder Biography & Vision
+                </label>
+                <textarea
+                  rows={4}
+                  value={sections.founder.description || ''}
+                  onChange={(e) =>
+                    setSections({
+                      ...sections,
+                      founder: {
+                        ...sections.founder,
+                        description: e.target.value,
+                      },
+                    })
+                  }
+                  className="w-full px-3 py-2 text-xs bg-neutral-950 border border-neutral-800 rounded-xl text-white focus:border-[#d4af37] focus:outline-none leading-relaxed"
+                />
+              </div>
+
+              <ImageUploader
+                label="Founder Portrait Image"
+                value={sections.founder.image_url || ''}
+                onChange={(url) =>
+                  setSections({
+                    ...sections,
+                    founder: { ...sections.founder, image_url: url },
+                  })
+                }
+                folder="founder"
+              />
+            </div>
+          )}
+
+          {/* ================= SECTION 5: CUSTOM JEWELLERY ================= */}
+          {activeTab === 'custom' && (
+            <div className="space-y-6">
+              <div className="border-b border-neutral-800 pb-4 flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-serif font-semibold text-white">
+                    Custom Jewellery Categories
+                  </h3>
+                  <p className="text-xs text-neutral-400 mt-1">
+                    Engagement & Wedding, Statement Pieces, and Everyday Luxury cards
+                  </p>
+                </div>
+                <button
+                  onClick={handleSaveCustomCategories}
+                  disabled={isSaving}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-[#d4af37] text-black hover:bg-[#b8952a] transition-colors"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>{isSaving ? 'Saving...' : 'Save Categories'}</span>
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                {customCategories.map((cat, idx) => (
+                  <div
+                    key={cat.id}
+                    className="p-4 rounded-xl bg-neutral-950/80 border border-neutral-800 space-y-4"
+                  >
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-[11px] text-neutral-400 font-medium block mb-1">
+                          Category Title
+                        </label>
+                        <input
+                          type="text"
+                          value={cat.title}
+                          onChange={(e) => {
+                            const updated = [...customCategories];
+                            updated[idx].title = e.target.value;
+                            setCustomCategories(updated);
+                          }}
+                          className="w-full px-3 py-2 text-xs bg-neutral-900 border border-neutral-800 rounded-lg text-white focus:border-[#d4af37] focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[11px] text-neutral-400 font-medium block mb-1">
+                          Badge Tag
+                        </label>
+                        <input
+                          type="text"
+                          value={cat.badge || ''}
+                          onChange={(e) => {
+                            const updated = [...customCategories];
+                            updated[idx].badge = e.target.value;
+                            setCustomCategories(updated);
+                          }}
+                          className="w-full px-3 py-2 text-xs bg-neutral-900 border border-neutral-800 rounded-lg text-white focus:border-[#d4af37] focus:outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-[11px] text-neutral-400 font-medium block mb-1">
+                        Category Description
+                      </label>
+                      <input
+                        type="text"
+                        value={cat.description}
+                        onChange={(e) => {
+                          const updated = [...customCategories];
+                          updated[idx].description = e.target.value;
+                          setCustomCategories(updated);
+                        }}
+                        className="w-full px-3 py-2 text-xs bg-neutral-900 border border-neutral-800 rounded-lg text-white focus:border-[#d4af37] focus:outline-none"
+                      />
+                    </div>
+
+                    <ImageUploader
+                      label={`Category Image for "${cat.title}"`}
+                      value={cat.image_url}
+                      onChange={(url) => {
+                        const updated = [...customCategories];
+                        updated[idx].image_url = url;
+                        setCustomCategories(updated);
+                      }}
+                      folder="custom-jewellery"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ================= SECTION 6: HERITAGE REDESIGN ================= */}
+          {activeTab === 'heritage' && (
+            <div className="space-y-6">
+              <div className="border-b border-neutral-800 pb-4 flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-serif font-semibold text-white">
+                    Heritage Redesign
+                  </h3>
+                  <p className="text-xs text-neutral-400 mt-1">
+                    Interactive Before & After slider images and heirloom transformation copy
+                  </p>
+                </div>
+                <button
+                  onClick={() => handleSaveSection('heritage')}
+                  disabled={isSaving}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-[#d4af37] text-black hover:bg-[#b8952a] transition-colors"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>{isSaving ? 'Publishing...' : 'Publish Changes'}</span>
+                </button>
+              </div>
+
+              <div>
+                <label className="text-xs font-medium text-neutral-300 block mb-1">
+                  Main Headline
+                </label>
+                <input
+                  type="text"
+                  value={sections.heritage.title || ''}
+                  onChange={(e) =>
+                    setSections({
+                      ...sections,
+                      heritage: { ...sections.heritage, title: e.target.value },
+                    })
+                  }
+                  className="w-full px-3 py-2 text-xs bg-neutral-950 border border-neutral-800 rounded-xl text-white focus:border-[#d4af37] focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-medium text-neutral-300 block mb-1">
+                  Description
+                </label>
+                <textarea
+                  rows={3}
+                  value={sections.heritage.description || ''}
+                  onChange={(e) =>
+                    setSections({
+                      ...sections,
+                      heritage: {
+                        ...sections.heritage,
+                        description: e.target.value,
+                      },
+                    })
+                  }
+                  className="w-full px-3 py-2 text-xs bg-neutral-950 border border-neutral-800 rounded-xl text-white focus:border-[#d4af37] focus:outline-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <ImageUploader
+                  label="Before Image (Ancestral / Vintage Piece)"
+                  value={sections.heritage.data?.before_image || ''}
+                  onChange={(url) =>
+                    setSections({
+                      ...sections,
+                      heritage: {
+                        ...sections.heritage,
+                        data: {
+                          ...sections.heritage.data,
+                          before_image: url,
+                        },
+                      },
+                    })
+                  }
+                  folder="heritage"
+                />
+                <ImageUploader
+                  label="After Image (Modern Custom Redesign)"
+                  value={sections.heritage.data?.after_image || ''}
+                  onChange={(url) =>
+                    setSections({
+                      ...sections,
+                      heritage: {
+                        ...sections.heritage,
+                        data: {
+                          ...sections.heritage.data,
+                          after_image: url,
+                        },
+                      },
+                    })
+                  }
+                  folder="heritage"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* ================= SECTION 7: GEMSTONES ================= */}
+          {activeTab === 'gemstones' && (
+            <div className="space-y-6">
+              <div className="border-b border-neutral-800 pb-4 flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-serif font-semibold text-white">
+                    Gemstones Showcase
+                  </h3>
+                  <p className="text-xs text-neutral-400 mt-1">
+                    Astrological planets, descriptions, and high-res gemstone images
+                  </p>
+                </div>
+                <button
+                  onClick={handleSaveGemstones}
+                  disabled={isSaving}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-[#d4af37] text-black hover:bg-[#b8952a] transition-colors"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>{isSaving ? 'Saving...' : 'Save Gemstones'}</span>
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {gemstones.map((gem, idx) => (
+                  <div
+                    key={gem.id}
+                    className="p-4 rounded-xl bg-neutral-950/80 border border-neutral-800 space-y-3"
+                  >
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-[10px] text-neutral-400 font-medium block mb-1">
+                          Gemstone Name
+                        </label>
+                        <input
+                          type="text"
+                          value={gem.name}
+                          onChange={(e) => {
+                            const updated = [...gemstones];
+                            updated[idx].name = e.target.value;
+                            setGemstones(updated);
+                          }}
+                          className="w-full px-2.5 py-1.5 text-xs bg-neutral-900 border border-neutral-800 rounded text-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-neutral-400 font-medium block mb-1">
+                          Vedic Planet
+                        </label>
+                        <input
+                          type="text"
+                          value={gem.planet || ''}
+                          onChange={(e) => {
+                            const updated = [...gemstones];
+                            updated[idx].planet = e.target.value;
+                            setGemstones(updated);
+                          }}
+                          className="w-full px-2.5 py-1.5 text-xs bg-neutral-900 border border-neutral-800 rounded text-white"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] text-neutral-400 font-medium block mb-1">
+                        Astrological Description
+                      </label>
+                      <input
+                        type="text"
+                        value={gem.description}
+                        onChange={(e) => {
+                          const updated = [...gemstones];
+                          updated[idx].description = e.target.value;
+                          setGemstones(updated);
+                        }}
+                        className="w-full px-2.5 py-1.5 text-xs bg-neutral-900 border border-neutral-800 rounded text-white"
+                      />
+                    </div>
+
+                    <ImageUploader
+                      label={`${gem.name} Gemstone Photo`}
+                      value={gem.image_url}
+                      onChange={(url) => {
+                        const updated = [...gemstones];
+                        updated[idx].image_url = url;
+                        setGemstones(updated);
+                      }}
+                      folder="gemstones"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ================= SECTION 8: TESTIMONIALS ================= */}
+          {activeTab === 'testimonials' && (
+            <div className="space-y-6">
+              <div className="border-b border-neutral-800 pb-4 flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-serif font-semibold text-white">
+                    Client Testimonials
+                  </h3>
+                  <p className="text-xs text-neutral-400 mt-1">
+                    Client stories, locations, and high-jewelry commission photos
+                  </p>
+                </div>
+                <button
+                  onClick={handleSaveTestimonials}
+                  disabled={isSaving}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-[#d4af37] text-black hover:bg-[#b8952a] transition-colors"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>{isSaving ? 'Saving...' : 'Save Testimonials'}</span>
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                {testimonials.map((test, idx) => (
+                  <div
+                    key={test.id}
+                    className="p-4 rounded-xl bg-neutral-950/80 border border-neutral-800 space-y-3"
+                  >
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      <div>
+                        <label className="text-[10px] text-neutral-400 font-medium block mb-1">
+                          Client Name
+                        </label>
+                        <input
+                          type="text"
+                          value={test.client_name}
+                          onChange={(e) => {
+                            const updated = [...testimonials];
+                            updated[idx].client_name = e.target.value;
+                            setTestimonials(updated);
+                          }}
+                          className="w-full px-2.5 py-1.5 text-xs bg-neutral-900 border border-neutral-800 rounded text-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-neutral-400 font-medium block mb-1">
+                          City / Location
+                        </label>
+                        <input
+                          type="text"
+                          value={test.location || ''}
+                          onChange={(e) => {
+                            const updated = [...testimonials];
+                            updated[idx].location = e.target.value;
+                            setTestimonials(updated);
+                          }}
+                          className="w-full px-2.5 py-1.5 text-xs bg-neutral-900 border border-neutral-800 rounded text-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-neutral-400 font-medium block mb-1">
+                          Jewellery Piece Created
+                        </label>
+                        <input
+                          type="text"
+                          value={test.piece_created || ''}
+                          onChange={(e) => {
+                            const updated = [...testimonials];
+                            updated[idx].piece_created = e.target.value;
+                            setTestimonials(updated);
+                          }}
+                          className="w-full px-2.5 py-1.5 text-xs bg-neutral-900 border border-neutral-800 rounded text-white"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] text-neutral-400 font-medium block mb-1">
+                        Client Review Quote
+                      </label>
+                      <textarea
+                        rows={3}
+                        value={test.quote}
+                        onChange={(e) => {
+                          const updated = [...testimonials];
+                          updated[idx].quote = e.target.value;
+                          setTestimonials(updated);
+                        }}
+                        className="w-full px-2.5 py-1.5 text-xs bg-neutral-900 border border-neutral-800 rounded text-white leading-relaxed"
+                      />
+                    </div>
+
+                    <ImageUploader
+                      label={`Photo of piece created for ${test.client_name}`}
+                      value={test.image_url || ''}
+                      onChange={(url) => {
+                        const updated = [...testimonials];
+                        updated[idx].image_url = url;
+                        setTestimonials(updated);
+                      }}
+                      folder="testimonials"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ================= SECTION 9: PLANS ================= */}
+          {activeTab === 'plans' && (
+            <div className="space-y-6">
+              <div className="border-b border-neutral-800 pb-4 flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-serif font-semibold text-white">
+                    Consultation Plans & Tiers
+                  </h3>
+                  <p className="text-xs text-neutral-400 mt-1">
+                    Discovery, Creation, and Heritage pricing tiers
+                  </p>
+                </div>
+                <button
+                  onClick={handleSavePlans}
+                  disabled={isSaving}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-[#d4af37] text-black hover:bg-[#b8952a] transition-colors"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>{isSaving ? 'Saving...' : 'Save Plans'}</span>
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                {plans.map((p, idx) => (
+                  <div
+                    key={p.id}
+                    className="p-4 rounded-xl bg-neutral-950/80 border border-neutral-800 space-y-3"
+                  >
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      <div>
+                        <label className="text-[10px] text-neutral-400 font-medium block mb-1">
+                          Plan Label
+                        </label>
+                        <input
+                          type="text"
+                          value={p.label}
+                          onChange={(e) => {
+                            const updated = [...plans];
+                            updated[idx].label = e.target.value;
+                            setPlans(updated);
+                          }}
+                          className="w-full px-2.5 py-1.5 text-xs bg-neutral-900 border border-neutral-800 rounded text-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-[#d4af37] font-medium block mb-1">
+                          Price
+                        </label>
+                        <input
+                          type="text"
+                          value={p.price}
+                          onChange={(e) => {
+                            const updated = [...plans];
+                            updated[idx].price = e.target.value;
+                            setPlans(updated);
+                          }}
+                          className="w-full px-2.5 py-1.5 text-xs bg-neutral-900 border border-neutral-800 rounded text-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-neutral-400 font-medium block mb-1">
+                          Button CTA
+                        </label>
+                        <input
+                          type="text"
+                          value={p.cta}
+                          onChange={(e) => {
+                            const updated = [...plans];
+                            updated[idx].cta = e.target.value;
+                            setPlans(updated);
+                          }}
+                          className="w-full px-2.5 py-1.5 text-xs bg-neutral-900 border border-neutral-800 rounded text-white"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] text-neutral-400 font-medium block mb-1">
+                        Description
+                      </label>
+                      <input
+                        type="text"
+                        value={p.description}
+                        onChange={(e) => {
+                          const updated = [...plans];
+                          updated[idx].description = e.target.value;
+                          setPlans(updated);
+                        }}
+                        className="w-full px-2.5 py-1.5 text-xs bg-neutral-900 border border-neutral-800 rounded text-white"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ================= SECTION 10: FOOTER & CONTACT ================= */}
+          {activeTab === 'footer' && (
+            <div className="space-y-6">
+              <div className="border-b border-neutral-800 pb-4 flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-serif font-semibold text-white">
+                    Footer & Contact Info
+                  </h3>
+                  <p className="text-xs text-neutral-400 mt-1">
+                    Studio address, direct telephone, booking email, and social links
+                  </p>
+                </div>
+                <button
+                  onClick={() => handleSaveSection('footer')}
+                  disabled={isSaving}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-[#d4af37] text-black hover:bg-[#b8952a] transition-colors"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>{isSaving ? 'Publishing...' : 'Publish Changes'}</span>
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-medium text-neutral-300 block mb-1">
+                    Primary Phone / WhatsApp
+                  </label>
+                  <input
+                    type="text"
+                    value={sections.footer.data?.phone || ''}
+                    onChange={(e) =>
+                      setSections({
+                        ...sections,
+                        footer: {
+                          ...sections.footer,
+                          data: {
+                            ...sections.footer.data,
+                            phone: e.target.value,
+                          },
+                        },
+                      })
+                    }
+                    className="w-full px-3 py-2 text-xs bg-neutral-950 border border-neutral-800 rounded-xl text-white focus:border-[#d4af37] focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-neutral-300 block mb-1">
+                    Studio Inquiries Email
+                  </label>
+                  <input
+                    type="email"
+                    value={sections.footer.data?.email || ''}
+                    onChange={(e) =>
+                      setSections({
+                        ...sections,
+                        footer: {
+                          ...sections.footer,
+                          data: {
+                            ...sections.footer.data,
+                            email: e.target.value,
+                          },
+                        },
+                      })
+                    }
+                    className="w-full px-3 py-2 text-xs bg-neutral-950 border border-neutral-800 rounded-xl text-white focus:border-[#d4af37] focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-medium text-neutral-300 block mb-1">
+                  Physical Studio Address
+                </label>
+                <input
+                  type="text"
+                  value={sections.footer.data?.address || ''}
+                  onChange={(e) =>
+                    setSections({
+                      ...sections,
+                      footer: {
+                        ...sections.footer,
+                        data: {
+                          ...sections.footer.data,
+                          address: e.target.value,
+                        },
+                      },
+                    })
+                  }
+                  className="w-full px-3 py-2 text-xs bg-neutral-950 border border-neutral-800 rounded-xl text-white focus:border-[#d4af37] focus:outline-none"
+                />
+              </div>
+
+              <ImageUploader
+                label="Studio Brand Logo"
+                value={sections.footer.image_url || ''}
+                onChange={(url) =>
+                  setSections({
+                    ...sections,
+                    footer: { ...sections.footer, image_url: url },
+                  })
+                }
+                folder="branding"
+              />
+            </div>
+          )}
+
+          {/* Bottom Section Navigator */}
+          <div className="pt-6 mt-8 border-t border-neutral-800/80 flex items-center justify-between">
+            {(() => {
+              const currentIdx = SECTIONS_NAV.findIndex((s) => s.id === activeTab);
+              const prevSec = currentIdx > 0 ? SECTIONS_NAV[currentIdx - 1] : null;
+              const nextSec =
+                currentIdx < SECTIONS_NAV.length - 1
+                  ? SECTIONS_NAV[currentIdx + 1]
+                  : null;
+
+              return (
+                <>
+                  {prevSec ? (
+                    <button
+                      type="button"
+                      onClick={() => handleTabChange(prevSec.id)}
+                      className="text-xs text-neutral-400 hover:text-neutral-200 transition-colors flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-neutral-800/50"
+                    >
+                      <span>← Previous: {prevSec.label}</span>
+                    </button>
+                  ) : (
+                    <div />
+                  )}
+
+                  {nextSec ? (
+                    <button
+                      type="button"
+                      onClick={() => handleTabChange(nextSec.id)}
+                      className="text-xs text-[#d4af37] hover:text-[#f5e6a3] transition-colors flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-[#d4af37]/10 font-medium"
+                    >
+                      <span>Next: {nextSec.label} →</span>
+                    </button>
+                  ) : (
+                    <div />
+                  )}
+                </>
+              );
+            })()}
           </div>
         </div>
-      </main>
+      </div>
     </div>
   );
 }
+
+export default function ContentStudioPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="p-8 text-neutral-400 text-xs">
+          Loading Website Content Studio...
+        </div>
+      }
+    >
+      <ContentStudio />
+    </Suspense>
+  );
+}
+

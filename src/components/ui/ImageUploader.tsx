@@ -133,7 +133,7 @@ export function ImageUploader({
           {isUploading ? (
             <div className="flex flex-col items-center gap-2 text-neutral-400">
               <Loader2 className="w-6 h-6 animate-spin text-[#d4af37]" />
-              <span className="text-xs">Uploading image to Supabase...</span>
+              <span className="text-xs">Uploading image...</span>
             </div>
           ) : value ? (
             <div className="flex items-center gap-4 w-full">
