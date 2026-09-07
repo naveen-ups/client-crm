@@ -14,7 +14,6 @@ import {
   MessageSquareQuote,
   CalendarCheck,
   Mail,
-  ExternalLink,
 } from 'lucide-react';
 
 export const CONTENT_SECTIONS = [
@@ -112,30 +111,6 @@ export function Sidebar() {
         <SidebarNav />
       </Suspense>
 
-      {/* Frontend Website Link / Quick View */}
-      <div className="p-3.5 border-t border-neutral-800/80">
-        <div className="p-3 rounded-xl bg-neutral-950/80 border border-neutral-800/80 space-y-2">
-          <div className="flex items-center justify-between text-xs text-neutral-400">
-            <span className="flex items-center gap-1.5 font-medium text-neutral-300 text-[11px]">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-              Live Storefront
-            </span>
-            <span className="text-[10px] text-neutral-500 font-mono">Aurumm</span>
-          </div>
-          <p className="text-[10px] text-neutral-400 leading-snug">
-            Edits update the live Aurumm website in real-time.
-          </p>
-          <a
-            href="http://localhost:5173"
-            target="_blank"
-            rel="noreferrer"
-            className="flex items-center justify-center gap-1.5 w-full py-1.5 px-3 text-xs font-medium text-[#d4af37] bg-[#d4af37]/10 hover:bg-[#d4af37]/20 border border-[#d4af37]/30 rounded-lg transition-colors"
-          >
-            <span>View Live Website</span>
-            <ExternalLink className="w-3 h-3" />
-          </a>
-        </div>
-      </div>
     </aside>
   );
 }

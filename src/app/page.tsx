@@ -11,7 +11,6 @@ import {
   AlertCircle,
   Plus,
   Trash2,
-  ExternalLink,
   RotateCcw,
 } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
@@ -269,19 +268,6 @@ function ContentStudio() {
       <Header
         title="Website Content & Media Studio"
         subtitle="Manage copy, collections, and luxury photography for the Aurumm storefront"
-        action={
-          <div className="flex items-center gap-2">
-            <a
-              href="http://localhost:5173"
-              target="_blank"
-              rel="noreferrer"
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium bg-neutral-900 border border-neutral-800 text-neutral-300 hover:text-white transition-colors"
-            >
-              <span>Preview Website</span>
-              <ExternalLink className="w-3.5 h-3.5 text-[#d4af37]" />
-            </a>
-          </div>
-        }
       />
 
       {/* Save alerts */}
