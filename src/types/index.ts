@@ -1,26 +1,3 @@
-export type LeadStatus =
-  | 'new'
-  | 'contacted'
-  | 'scheduled'
-  | 'in_progress'
-  | 'converted'
-  | 'archived';
-
-export interface Lead {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  message?: string;
-  status: LeadStatus;
-  preferred_gemstone?: string;
-  budget_range?: string;
-  consultant_notes?: string;
-  source?: string;
-  created_at: string;
-  updated_at?: string;
-}
-
 export interface SiteSectionContent {
   id: string; // 'hero' | 'philosophy' | 'founder' | 'heritage' | 'footer'
   section_name: string;

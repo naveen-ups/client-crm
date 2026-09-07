@@ -3,7 +3,6 @@ import {
   CompleteWebsiteContent,
   CustomCategoryItem,
   GemstoneItem,
-  Lead,
   PlanItem,
   SiteSectionContent,
   TestimonialItem,
@@ -381,49 +380,6 @@ export const DEFAULT_PLANS: PlanItem[] = [
     popular: false,
     sort_order: 3,
     is_active: true,
-  },
-];
-
-export const INITIAL_DEMO_LEADS: Lead[] = [
-  {
-    id: 'lead-101',
-    name: 'Radhika Sharma',
-    email: 'radhika.sharma@example.com',
-    phone: '+91 9876543210',
-    message: 'Looking for a bespoke emerald engagement ring in 18k yellow gold.',
-    status: 'new',
-    preferred_gemstone: 'Emerald',
-    budget_range: '₹1,50,000 - ₹2,50,000',
-    consultant_notes: 'Wants Zambian emerald with minimal oiling.',
-    source: 'Website Book Consultation',
-    created_at: new Date(Date.now() - 1000 * 60 * 35).toISOString(),
-  },
-  {
-    id: 'lead-102',
-    name: 'Arjun Kapoor',
-    email: 'arjun.kapoor@example.com',
-    phone: '+91 9811223344',
-    message: 'Need consultation for Vedic Blue Sapphire ring.',
-    status: 'contacted',
-    preferred_gemstone: 'Blue Sapphire',
-    budget_range: '₹2,00,000+',
-    consultant_notes: 'Sent preliminary gemstone certificates via WhatsApp.',
-    source: 'Website Book Consultation',
-    created_at: new Date(Date.now() - 1000 * 60 * 60 * 4).toISOString(),
-  },
-  {
-    id: 'lead-103',
-    name: 'Kavita Singhania',
-    email: 'kavita@singhania.org',
-    phone: '+91 9920033445',
-    message:
-      'Have heirloom diamond and ruby necklace that needs modern wearable redesign.',
-    status: 'scheduled',
-    preferred_gemstone: 'Ruby & Diamond',
-    budget_range: 'Custom Quote',
-    consultant_notes: 'Studio meeting scheduled for Saturday 3:00 PM.',
-    source: 'Website Book Consultation',
-    created_at: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
   },
 ];
 
