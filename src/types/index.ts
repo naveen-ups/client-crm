@@ -111,3 +111,13 @@ export interface CompleteWebsiteContent {
   plans: PlanItem[];
   updatedAt: string;
 }
+
+export interface WebsiteRecord {
+  id: string;
+  name: string;
+  domain?: string;
+  content: CompleteWebsiteContent;
+  created_at?: string;
+  updated_at?: string;
+}
+

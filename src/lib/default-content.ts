@@ -1,5 +1,6 @@
 import {
   CollectionItem,
+  CompleteWebsiteContent,
   CustomCategoryItem,
   GemstoneItem,
   Lead,
@@ -425,3 +426,14 @@ export const INITIAL_DEMO_LEADS: Lead[] = [
     created_at: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
   },
 ];
+
+export const DEFAULT_COMPLETE_WEBSITE_CONTENT: CompleteWebsiteContent = {
+  sections: DEFAULT_SITE_SECTIONS,
+  collections: DEFAULT_COLLECTIONS,
+  customCategories: DEFAULT_CUSTOM_CATEGORIES,
+  gemstones: DEFAULT_GEMSTONES,
+  testimonials: DEFAULT_TESTIMONIALS,
+  plans: DEFAULT_PLANS,
+  updatedAt: new Date().toISOString(),
+};
+

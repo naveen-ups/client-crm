@@ -22,14 +22,17 @@ export async function OPTIONS() {
   });
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   const supabase = createServerClient();
+  const { searchParams } = new URL(request.url);
+  const siteId = searchParams.get('site') || 'aurumm';
 
   if (!supabase) {
     // Return default content if Supabase is not configured yet
     return NextResponse.json(
       {
         source: 'default',
+        siteId,
         sections: DEFAULT_SITE_SECTIONS,
         collections: DEFAULT_COLLECTIONS,
         customCategories: DEFAULT_CUSTOM_CATEGORIES,
@@ -48,6 +51,38 @@ export async function GET() {
   }
 
   try {
+    // 1. First priority: Check single multi-tenant `websites` table with JSONB
+    const { data: website, error: siteError } = await supabase
+      .from('websites')
+      .select('*')
+      .eq('id', siteId)
+      .maybeSingle();
+
+    if (website && website.content && Object.keys(website.content).length > 0) {
+      const content = website.content;
+      return NextResponse.json(
+        {
+          source: 'supabase_jsonb',
+          siteId: website.id,
+          siteName: website.name,
+          sections: content.sections || DEFAULT_SITE_SECTIONS,
+          collections: content.collections || DEFAULT_COLLECTIONS,
+          customCategories: content.customCategories || DEFAULT_CUSTOM_CATEGORIES,
+          gemstones: content.gemstones || DEFAULT_GEMSTONES,
+          testimonials: content.testimonials || DEFAULT_TESTIMONIALS,
+          plans: content.plans || DEFAULT_PLANS,
+          updatedAt: website.updated_at || content.updatedAt || new Date().toISOString(),
+        },
+        {
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=60',
+          },
+        }
+      );
+    }
+
+    // 2. Fallback for backward compatibility: Legacy relational tables
     const [
       sectionsRes,
       collectionsRes,
@@ -94,7 +129,8 @@ export async function GET() {
 
     return NextResponse.json(
       {
-        source: 'supabase',
+        source: 'supabase_relational',
+        siteId,
         sections: sectionsMap,
         collections: collectionsRes.data?.length
           ? collectionsRes.data
@@ -123,6 +159,7 @@ export async function GET() {
     return NextResponse.json(
       {
         source: 'fallback',
+        siteId,
         error: error.message,
         sections: DEFAULT_SITE_SECTIONS,
         collections: DEFAULT_COLLECTIONS,
