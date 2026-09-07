@@ -2,7 +2,8 @@
 
 import React, { Suspense } from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, usePathname } from 'next/navigation';
+import { useSite } from '@/context/SiteContext';
 import {
   Sparkles,
   ShoppingBag,
@@ -81,21 +82,29 @@ function SidebarNav() {
 }
 
 export function Sidebar() {
+  const pathname = usePathname();
+  const { activeSiteName } = useSite();
+
+  if (pathname === '/login') return null;
+
   return (
     <aside className="w-64 bg-[#0a0a0c] border-r border-neutral-800/80 flex flex-col shrink-0 min-h-screen sticky top-0 h-screen">
       {/* Brand Header */}
       <div className="p-5 border-b border-neutral-800/80">
         <Link href="/" className="flex items-center gap-3 group">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#997825] via-[#d4af37] to-[#f5e6a3] p-0.5 shadow-lg shadow-[#d4af37]/10 flex items-center justify-center">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#997825] via-[#d4af37] to-[#f5e6a3] p-0.5 shadow-lg shadow-[#d4af37]/10 flex items-center justify-center shrink-0">
             <div className="w-full h-full bg-[#0e0e11] rounded-[10px] flex items-center justify-center">
               <Sparkles className="w-4 h-4 text-[#d4af37] group-hover:rotate-12 transition-transform duration-300" />
             </div>
           </div>
-          <div>
-            <h1 className="font-semibold text-sm tracking-wider text-[#faf7f0] uppercase font-serif">
-              AURUMM
+          <div className="min-w-0 flex-1">
+            <h1
+              className="font-semibold text-sm tracking-wider text-[#faf7f0] uppercase font-serif truncate"
+              title={activeSiteName}
+            >
+              {activeSiteName}
             </h1>
-            <p className="text-[10px] tracking-widest text-[#d4af37] uppercase font-mono">
+            <p className="text-[10px] tracking-widest text-[#d4af37] uppercase font-mono truncate">
               Content Studio
             </p>
           </div>

@@ -8,7 +8,9 @@
     "start": "next start",
     "lint": "eslint",
     "db:setup": "node scripts/setup-db.mjs",
-    "db:seed": "node scripts/seed-aurumm-jsonb.mjs"
+    "db:seed": "node scripts/seed-aurumm-jsonb.mjs",
+    "auth:create-root": "node scripts/create-root-user.mjs",
+    "auth:create-user": "node scripts/create-user.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.6",

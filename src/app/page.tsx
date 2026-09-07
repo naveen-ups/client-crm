@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import {
   Sparkles,
   Save,
@@ -12,9 +12,12 @@ import {
   Plus,
   Trash2,
   RotateCcw,
+  LogOut,
+  Shield,
 } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { ImageUploader } from '@/components/ui/ImageUploader';
+import { useSite } from '@/context/SiteContext';
 import {
   DEFAULT_COLLECTIONS,
   DEFAULT_CUSTOM_CATEGORIES,
@@ -47,9 +50,19 @@ const SECTIONS_NAV = [
 ];
 
 function ContentStudio() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const sectionQuery = searchParams.get('section');
   const [activeTab, setActiveTab] = useState('hero');
+
+  const {
+    activeSiteId,
+    activeSiteName,
+    availableSites,
+    setActiveSiteId,
+    currentUser,
+    handleSignOut,
+  } = useSite();
 
   useEffect(() => {
     if (sectionQuery && SECTIONS_NAV.some((s) => s.id === sectionQuery)) {
@@ -61,6 +74,7 @@ function ContentStudio() {
     setActiveTab(tabId);
     window.history.pushState(null, '', `/?section=${tabId}`);
   };
+
   const [sections, setSections] = useState<Record<string, SiteSectionContent>>(
     DEFAULT_SITE_SECTIONS
   );
@@ -75,11 +89,6 @@ function ContentStudio() {
     useState<TestimonialItem[]>(DEFAULT_TESTIMONIALS);
   const [plans, setPlans] = useState<PlanItem[]>(DEFAULT_PLANS);
 
-  const [activeSiteId, setActiveSiteId] = useState('aurumm');
-  const [availableSites, setAvailableSites] = useState<
-    Array<{ id: string; name: string }>
-  >([{ id: 'aurumm', name: 'Aurumm Fine Jewellery' }]);
-
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -93,7 +102,7 @@ function ContentStudio() {
     testimonials?: TestimonialItem[];
     plans?: PlanItem[];
   } = {}) => {
-    if (!isSupabaseConfigured()) return;
+    if (!isSupabaseConfigured() || !activeSiteId) return;
     try {
       const fullDoc = {
         sections: overrides.sections || sections,
@@ -107,9 +116,7 @@ function ContentStudio() {
 
       await supabase.from('websites').upsert({
         id: activeSiteId,
-        name:
-          availableSites.find((s) => s.id === activeSiteId)?.name ||
-          (activeSiteId === 'aurumm' ? 'Aurumm Fine Jewellery' : activeSiteId),
+        name: activeSiteName,
         content: fullDoc,
         updated_at: new Date().toISOString(),
       });
@@ -121,17 +128,9 @@ function ContentStudio() {
   // Load from Supabase websites JSONB table
   useEffect(() => {
     async function loadRemoteContent() {
-      if (!isSupabaseConfigured()) return;
+      if (!isSupabaseConfigured() || !activeSiteId) return;
 
       try {
-        // Query available sites list
-        const { data: sitesList } = await supabase
-          .from('websites')
-          .select('id, name');
-        if (sitesList && sitesList.length > 0) {
-          setAvailableSites(sitesList);
-        }
-
         // Fetch single JSONB document from `websites` table
         const { data: siteRecord, error } = await supabase
           .from('websites')
@@ -278,28 +277,52 @@ function ContentStudio() {
     <div className="flex-1 flex flex-col">
       <Header
         title="Website Content & Media Studio"
-        subtitle="Manage copy, collections, and luxury photography for the Aurumm storefront"
+        subtitle="Manage copy, collections, and luxury media for your storefront"
         action={
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-neutral-900 border border-neutral-800 text-xs text-neutral-300">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#d4af37]"></span>
-              <span className="text-[11px] text-neutral-400">Website:</span>
-              <select
-                value={activeSiteId}
-                onChange={(e) => setActiveSiteId(e.target.value)}
-                className="bg-transparent text-white font-medium text-xs focus:outline-none cursor-pointer"
-              >
-                {availableSites.map((s) => (
-                  <option
-                    key={s.id}
-                    value={s.id}
-                    className="bg-neutral-950 text-white"
-                  >
-                    {s.name}
-                  </option>
-                ))}
-              </select>
+          <div className="flex items-center gap-2 sm:gap-3 flex-wrap justify-end">
+            {currentUser?.role === 'root' && availableSites.length > 1 && (
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-neutral-900 border border-neutral-800 text-xs text-neutral-300">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#d4af37]"></span>
+                <span className="text-[11px] text-neutral-400">Website:</span>
+                <select
+                  value={activeSiteId}
+                  onChange={(e) => setActiveSiteId(e.target.value)}
+                  className="bg-transparent text-white font-medium text-xs focus:outline-none cursor-pointer"
+                >
+                  {availableSites.map((s) => (
+                    <option
+                      key={s.id}
+                      value={s.id}
+                      className="bg-neutral-950 text-white"
+                    >
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-[#d4af37]/10 border border-[#d4af37]/30 text-xs text-[#f5d77f]">
+              <Shield className="w-3.5 h-3.5 text-[#d4af37]" />
+              <span className="font-semibold uppercase tracking-wider text-[10px] text-[#d4af37]">
+                {currentUser?.role === 'root'
+                  ? 'root'
+                  : currentUser?.siteId || 'admin'}
+              </span>
+              <span className="text-neutral-500">•</span>
+              <span className="text-neutral-300 font-mono text-[11px] max-w-[130px] truncate">
+                {currentUser?.email || 'authenticated'}
+              </span>
             </div>
+
+            <button
+              onClick={handleSignOut}
+              title="Sign out"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 hover:border-red-500/40 text-neutral-400 hover:text-red-400 text-xs font-medium transition-all cursor-pointer"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Sign Out</span>
+            </button>
           </div>
         }
       />
@@ -349,7 +372,7 @@ function ContentStudio() {
                     Hero Section
                   </h3>
                   <p className="text-xs text-neutral-400 mt-1">
-                    First luxury impression visible when visitors load the Aurumm landing page
+                    First luxury impression visible when visitors load the storefront landing page
                   </p>
                 </div>
                 <button
