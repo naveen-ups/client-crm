@@ -15,6 +15,8 @@ import {
   MessageSquareQuote,
   CalendarCheck,
   Mail,
+  X,
+  LogOut,
 } from 'lucide-react';
 
 export const CONTENT_SECTIONS = [
@@ -30,7 +32,7 @@ export const CONTENT_SECTIONS = [
   { id: 'footer', label: 'Footer & Contact', num: '10', icon: Mail },
 ];
 
-function SidebarNav() {
+function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   const searchParams = useSearchParams();
   const currentSection = searchParams.get('section') || 'hero';
 
@@ -49,7 +51,8 @@ function SidebarNav() {
             key={item.id}
             href={`/?section=${item.id}`}
             scroll={false}
-            className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-all group ${
+            onClick={onNavigate}
+            className={`flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium transition-all group ${
               isActive
                 ? 'bg-gradient-to-r from-[#d4af37]/20 via-[#d4af37]/10 to-transparent text-[#f5e6a3] border-l-2 border-[#d4af37] shadow-sm'
                 : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-900/60'
@@ -81,17 +84,24 @@ function SidebarNav() {
   );
 }
 
-export function Sidebar() {
-  const pathname = usePathname();
-  const { activeSiteName } = useSite();
-
-  if (pathname === '/login') return null;
+function SidebarBody({
+  isMobile = false,
+  onClose,
+}: {
+  isMobile?: boolean;
+  onClose?: () => void;
+}) {
+  const { activeSiteName, activeSiteId, currentUser, handleSignOut } = useSite();
 
   return (
-    <aside className="w-64 bg-[#0a0a0c] border-r border-neutral-800/80 flex flex-col shrink-0 min-h-screen sticky top-0 h-screen">
+    <div className="flex flex-col h-full bg-[#0a0a0c]">
       {/* Brand Header */}
-      <div className="p-5 border-b border-neutral-800/80">
-        <Link href="/" className="flex items-center gap-3 group">
+      <div className="p-4 sm:p-5 border-b border-neutral-800/80 flex items-center justify-between gap-2 shrink-0">
+        <Link
+          href="/"
+          onClick={onClose}
+          className="flex items-center gap-3 group min-w-0 flex-1"
+        >
           <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#997825] via-[#d4af37] to-[#f5e6a3] p-0.5 shadow-lg shadow-[#d4af37]/10 flex items-center justify-center shrink-0">
             <div className="w-full h-full bg-[#0e0e11] rounded-[10px] flex items-center justify-center">
               <Sparkles className="w-4 h-4 text-[#d4af37] group-hover:rotate-12 transition-transform duration-300" />
@@ -109,17 +119,90 @@ export function Sidebar() {
             </p>
           </div>
         </Link>
+
+        {isMobile && (
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close navigation"
+            className="p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-900 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        )}
       </div>
 
       {/* Navigation Links */}
       <Suspense
         fallback={
-          <div className="flex-1 p-4 text-xs text-neutral-500">Loading navigation...</div>
+          <div className="flex-1 p-4 text-xs text-neutral-500">
+            Loading navigation...
+          </div>
         }
       >
-        <SidebarNav />
+        <SidebarNav onNavigate={onClose} />
       </Suspense>
 
-    </aside>
+      {/* Sidebar Footer: Website & User Info + Sign Out */}
+      <div className="p-3.5 border-t border-neutral-800/80 bg-neutral-950/80 mt-auto space-y-2 shrink-0">
+        <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[#d4af37]/10 border border-[#d4af37]/30 text-xs min-w-0">
+          <span className="font-semibold lowercase tracking-wide text-xs text-[#d4af37] shrink-0">
+            {activeSiteId || currentUser?.siteId || 'aurumm'}
+          </span>
+          <span className="text-neutral-500 shrink-0">•</span>
+          <span
+            className="text-neutral-300 font-mono text-[11px] truncate min-w-0 flex-1"
+            title={currentUser?.email || 'admin@aurumm.com'}
+          >
+            {currentUser?.email || 'admin@aurumm.com'}
+          </span>
+        </div>
+
+        <button
+          type="button"
+          onClick={async () => {
+            if (onClose) onClose();
+            await handleSignOut();
+          }}
+          className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-neutral-400 hover:text-red-400 bg-neutral-900/80 hover:bg-neutral-900 border border-neutral-800 hover:border-red-500/30 transition-all cursor-pointer group"
+        >
+          <LogOut className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" />
+          <span>Sign Out</span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export function Sidebar() {
+  const pathname = usePathname();
+  const { isMobileNavOpen, setIsMobileNavOpen } = useSite();
+
+  if (pathname === '/login') return null;
+
+  return (
+    <>
+      {/* Desktop Persistent Sidebar */}
+      <aside className="hidden lg:flex w-64 border-r border-neutral-800/80 flex-col shrink-0 h-full">
+        <SidebarBody />
+      </aside>
+
+      {/* Mobile Sliding Drawer Backdrop */}
+      {isMobileNavOpen && (
+        <div
+          onClick={() => setIsMobileNavOpen(false)}
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-40 lg:hidden animate-fade-in"
+        />
+      )}
+
+      {/* Mobile Sliding Drawer Sheet */}
+      <div
+        className={`fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] border-r border-neutral-800 lg:hidden shadow-2xl transform transition-transform duration-300 ease-in-out ${
+          isMobileNavOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        <SidebarBody isMobile onClose={() => setIsMobileNavOpen(false)} />
+      </div>
+    </>
   );
 }

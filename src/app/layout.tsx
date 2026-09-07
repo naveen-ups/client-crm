@@ -29,10 +29,10 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased dark`}
     >
-      <body className="min-h-full bg-[#0d0d0f] text-[#faf7f0] flex">
+      <body className="h-full min-h-[100dvh] bg-[#0d0d0f] text-[#faf7f0] flex overflow-hidden">
         <SiteProvider>
           <Sidebar />
-          <div className="flex-1 flex flex-col min-w-0 overflow-x-hidden min-h-screen">
+          <div className="flex-1 flex flex-col min-w-0 h-full overflow-y-auto overflow-x-hidden">
             {children}
           </div>
         </SiteProvider>

@@ -12,8 +12,6 @@ import {
   Plus,
   Trash2,
   RotateCcw,
-  LogOut,
-  Shield,
 } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { ImageUploader } from '@/components/ui/ImageUploader';
@@ -61,7 +59,6 @@ function ContentStudio() {
     availableSites,
     setActiveSiteId,
     currentUser,
-    handleSignOut,
   } = useSite();
 
   useEffect(() => {
@@ -70,10 +67,7 @@ function ContentStudio() {
     }
   }, [sectionQuery]);
 
-  const handleTabChange = (tabId: string) => {
-    setActiveTab(tabId);
-    window.history.pushState(null, '', `/?section=${tabId}`);
-  };
+
 
   const [sections, setSections] = useState<Record<string, SiteSectionContent>>(
     DEFAULT_SITE_SECTIONS
@@ -279,106 +273,64 @@ function ContentStudio() {
         title="Website Content & Media Studio"
         subtitle="Manage copy, collections, and luxury media for your storefront"
         action={
-          <div className="flex items-center gap-2 sm:gap-3 flex-wrap justify-end">
-            {currentUser?.role === 'root' && availableSites.length > 1 && (
-              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-neutral-900 border border-neutral-800 text-xs text-neutral-300">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#d4af37]"></span>
-                <span className="text-[11px] text-neutral-400">Website:</span>
-                <select
-                  value={activeSiteId}
-                  onChange={(e) => setActiveSiteId(e.target.value)}
-                  className="bg-transparent text-white font-medium text-xs focus:outline-none cursor-pointer"
-                >
-                  {availableSites.map((s) => (
-                    <option
-                      key={s.id}
-                      value={s.id}
-                      className="bg-neutral-950 text-white"
-                    >
-                      {s.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-[#d4af37]/10 border border-[#d4af37]/30 text-xs text-[#f5d77f]">
-              <Shield className="w-3.5 h-3.5 text-[#d4af37]" />
-              <span className="font-semibold uppercase tracking-wider text-[10px] text-[#d4af37]">
-                {currentUser?.role === 'root'
-                  ? 'root'
-                  : currentUser?.siteId || 'admin'}
-              </span>
-              <span className="text-neutral-500">•</span>
-              <span className="text-neutral-300 font-mono text-[11px] max-w-[130px] truncate">
-                {currentUser?.email || 'authenticated'}
-              </span>
+          currentUser?.role === 'root' && availableSites.length > 1 ? (
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-neutral-900 border border-neutral-800 text-xs text-neutral-300">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#d4af37]"></span>
+              <span className="text-[11px] text-neutral-400">Website:</span>
+              <select
+                value={activeSiteId}
+                onChange={(e) => setActiveSiteId(e.target.value)}
+                className="bg-transparent text-white font-medium text-xs focus:outline-none cursor-pointer"
+              >
+                {availableSites.map((s) => (
+                  <option
+                    key={s.id}
+                    value={s.id}
+                    className="bg-neutral-950 text-white"
+                  >
+                    {s.name}
+                  </option>
+                ))}
+              </select>
             </div>
-
-            <button
-              onClick={handleSignOut}
-              title="Sign out"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 hover:border-red-500/40 text-neutral-400 hover:text-red-400 text-xs font-medium transition-all cursor-pointer"
-            >
-              <LogOut className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Sign Out</span>
-            </button>
-          </div>
+          ) : undefined
         }
       />
 
       {/* Save alerts */}
       {saveSuccess && (
-        <div className="mx-8 mt-6 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-medium flex items-center gap-2 animate-fade-in">
-          <CheckCircle2 className="w-4 h-4" />
+        <div className="mx-4 sm:mx-8 mt-4 sm:mt-6 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-medium flex items-center gap-2 animate-fade-in">
+          <CheckCircle2 className="w-4 h-4 shrink-0" />
           <span>{saveSuccess}</span>
         </div>
       )}
 
       {saveError && (
-        <div className="mx-8 mt-6 p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-medium flex items-center gap-2 animate-fade-in">
-          <AlertCircle className="w-4 h-4" />
+        <div className="mx-4 sm:mx-8 mt-4 sm:mt-6 p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-medium flex items-center gap-2 animate-fade-in">
+          <AlertCircle className="w-4 h-4 shrink-0" />
           <span>{saveError}</span>
         </div>
       )}
 
-      <div className="p-8 max-w-6xl w-full mx-auto space-y-6">
-        {/* Horizontal Quick-Jump Section Navigation */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-thin">
-          {SECTIONS_NAV.map((sec) => (
-            <button
-              key={sec.id}
-              type="button"
-              onClick={() => handleTabChange(sec.id)}
-              className={`px-4 py-2 rounded-xl text-xs font-medium whitespace-nowrap transition-all shrink-0 ${
-                activeTab === sec.id
-                  ? 'bg-gradient-to-r from-[#d4af37] to-[#b8952a] text-black font-semibold shadow-md shadow-[#d4af37]/20'
-                  : 'bg-neutral-900/80 text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/80 border border-neutral-800/60'
-              }`}
-            >
-              <span>{sec.label}</span>
-            </button>
-          ))}
-        </div>
-
+      <div className="p-4 sm:p-6 lg:p-8 max-w-6xl w-full mx-auto space-y-5 sm:space-y-6 min-w-0">
         {/* Editor Pane */}
-        <div className="bg-neutral-900/50 border border-neutral-800/80 rounded-2xl p-6 sm:p-8 space-y-8">
+        <div className="bg-neutral-900/50 border border-neutral-800/80 rounded-xl sm:rounded-2xl p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8 min-w-0">
           {/* ================= SECTION 1: HERO ================= */}
           {activeTab === 'hero' && (
             <div className="space-y-6">
-              <div className="border-b border-neutral-800 pb-4 flex items-center justify-between">
+              <div className="border-b border-neutral-800 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
-                  <h3 className="text-lg font-serif font-semibold text-white">
-                    Hero Section
+                  <h3 className="text-base sm:text-lg font-serif font-semibold text-white">
+                    Hero Spotlight & Brand Logo
                   </h3>
                   <p className="text-xs text-neutral-400 mt-1">
-                    First luxury impression visible when visitors load the storefront landing page
+                    First luxury impression, website brand logo, and primary call-to-actions
                   </p>
                 </div>
                 <button
                   onClick={() => handleSaveSection('hero')}
                   disabled={isSaving}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-[#d4af37] text-black hover:bg-[#b8952a] transition-colors"
+                  className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-[#d4af37] text-black hover:bg-[#b8952a] transition-colors w-full sm:w-auto shrink-0 cursor-pointer"
                 >
                   <Save className="w-4 h-4" />
                   <span>{isSaving ? 'Publishing...' : 'Publish Changes'}</span>
@@ -497,7 +449,7 @@ function ContentStudio() {
               </div>
 
               <ImageUploader
-                label="Hero Background / Ambient Visual"
+                label="Website Brand Logo (Navbar & Footer)"
                 value={sections.hero.image_url || ''}
                 onChange={(url) =>
                   setSections({
@@ -505,7 +457,8 @@ function ContentStudio() {
                     hero: { ...sections.hero, image_url: url },
                   })
                 }
-                folder="hero"
+                folder="branding"
+                recommendedSize="Transparent PNG or SVG • e.g. 300x80px"
               />
             </div>
           )}
@@ -513,9 +466,9 @@ function ContentStudio() {
           {/* ================= SECTION 2: COLLECTIONS (SHOP GRID) ================= */}
           {activeTab === 'collections' && (
             <div className="space-y-6">
-              <div className="border-b border-neutral-800 pb-4 flex items-center justify-between">
+              <div className="border-b border-neutral-800 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
-                  <h3 className="text-lg font-serif font-semibold text-white">
+                  <h3 className="text-base sm:text-lg font-serif font-semibold text-white">
                     Shop Collections
                   </h3>
                   <p className="text-xs text-neutral-400 mt-1">
@@ -525,7 +478,7 @@ function ContentStudio() {
                 <button
                   onClick={handleSaveCollections}
                   disabled={isSaving}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-[#d4af37] text-black hover:bg-[#b8952a] transition-colors"
+                  className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-[#d4af37] text-black hover:bg-[#b8952a] transition-colors w-full sm:w-auto shrink-0 cursor-pointer"
                 >
                   <Save className="w-4 h-4" />
                   <span>{isSaving ? 'Saving...' : 'Save Collections'}</span>
@@ -659,9 +612,9 @@ function ContentStudio() {
           {/* ================= SECTION 3: PHILOSOPHY ================= */}
           {activeTab === 'philosophy' && (
             <div className="space-y-6">
-              <div className="border-b border-neutral-800 pb-4 flex items-center justify-between">
+              <div className="border-b border-neutral-800 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
-                  <h3 className="text-lg font-serif font-semibold text-white">
+                  <h3 className="text-base sm:text-lg font-serif font-semibold text-white">
                     Brand Philosophy Section
                   </h3>
                   <p className="text-xs text-neutral-400 mt-1">
@@ -671,7 +624,7 @@ function ContentStudio() {
                 <button
                   onClick={() => handleSaveSection('philosophy')}
                   disabled={isSaving}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-[#d4af37] text-black hover:bg-[#b8952a] transition-colors"
+                  className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-[#d4af37] text-black hover:bg-[#b8952a] transition-colors w-full sm:w-auto shrink-0 cursor-pointer"
                 >
                   <Save className="w-4 h-4" />
                   <span>{isSaving ? 'Publishing...' : 'Publish Changes'}</span>
@@ -816,9 +769,9 @@ function ContentStudio() {
           {/* ================= SECTION 4: FOUNDER ================= */}
           {activeTab === 'founder' && (
             <div className="space-y-6">
-              <div className="border-b border-neutral-800 pb-4 flex items-center justify-between">
+              <div className="border-b border-neutral-800 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
-                  <h3 className="text-lg font-serif font-semibold text-white">
+                  <h3 className="text-base sm:text-lg font-serif font-semibold text-white">
                     Meet The Founder
                   </h3>
                   <p className="text-xs text-neutral-400 mt-1">
@@ -828,7 +781,7 @@ function ContentStudio() {
                 <button
                   onClick={() => handleSaveSection('founder')}
                   disabled={isSaving}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-[#d4af37] text-black hover:bg-[#b8952a] transition-colors"
+                  className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-[#d4af37] text-black hover:bg-[#b8952a] transition-colors w-full sm:w-auto shrink-0 cursor-pointer"
                 >
                   <Save className="w-4 h-4" />
                   <span>{isSaving ? 'Publishing...' : 'Publish Changes'}</span>
@@ -942,9 +895,9 @@ function ContentStudio() {
           {/* ================= SECTION 5: CUSTOM JEWELLERY ================= */}
           {activeTab === 'custom' && (
             <div className="space-y-6">
-              <div className="border-b border-neutral-800 pb-4 flex items-center justify-between">
+              <div className="border-b border-neutral-800 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
-                  <h3 className="text-lg font-serif font-semibold text-white">
+                  <h3 className="text-base sm:text-lg font-serif font-semibold text-white">
                     Custom Jewellery Categories
                   </h3>
                   <p className="text-xs text-neutral-400 mt-1">
@@ -954,7 +907,7 @@ function ContentStudio() {
                 <button
                   onClick={handleSaveCustomCategories}
                   disabled={isSaving}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-[#d4af37] text-black hover:bg-[#b8952a] transition-colors"
+                  className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-[#d4af37] text-black hover:bg-[#b8952a] transition-colors w-full sm:w-auto shrink-0 cursor-pointer"
                 >
                   <Save className="w-4 h-4" />
                   <span>{isSaving ? 'Saving...' : 'Save Categories'}</span>
@@ -1035,9 +988,9 @@ function ContentStudio() {
           {/* ================= SECTION 6: HERITAGE REDESIGN ================= */}
           {activeTab === 'heritage' && (
             <div className="space-y-6">
-              <div className="border-b border-neutral-800 pb-4 flex items-center justify-between">
+              <div className="border-b border-neutral-800 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
-                  <h3 className="text-lg font-serif font-semibold text-white">
+                  <h3 className="text-base sm:text-lg font-serif font-semibold text-white">
                     Heritage Redesign
                   </h3>
                   <p className="text-xs text-neutral-400 mt-1">
@@ -1047,7 +1000,7 @@ function ContentStudio() {
                 <button
                   onClick={() => handleSaveSection('heritage')}
                   disabled={isSaving}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-[#d4af37] text-black hover:bg-[#b8952a] transition-colors"
+                  className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-[#d4af37] text-black hover:bg-[#b8952a] transition-colors w-full sm:w-auto shrink-0 cursor-pointer"
                 >
                   <Save className="w-4 h-4" />
                   <span>{isSaving ? 'Publishing...' : 'Publish Changes'}</span>
@@ -1133,9 +1086,9 @@ function ContentStudio() {
           {/* ================= SECTION 7: GEMSTONES ================= */}
           {activeTab === 'gemstones' && (
             <div className="space-y-6">
-              <div className="border-b border-neutral-800 pb-4 flex items-center justify-between">
+              <div className="border-b border-neutral-800 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
-                  <h3 className="text-lg font-serif font-semibold text-white">
+                  <h3 className="text-base sm:text-lg font-serif font-semibold text-white">
                     Gemstones Showcase
                   </h3>
                   <p className="text-xs text-neutral-400 mt-1">
@@ -1145,7 +1098,7 @@ function ContentStudio() {
                 <button
                   onClick={handleSaveGemstones}
                   disabled={isSaving}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-[#d4af37] text-black hover:bg-[#b8952a] transition-colors"
+                  className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-[#d4af37] text-black hover:bg-[#b8952a] transition-colors w-full sm:w-auto shrink-0 cursor-pointer"
                 >
                   <Save className="w-4 h-4" />
                   <span>{isSaving ? 'Saving...' : 'Save Gemstones'}</span>
@@ -1226,9 +1179,9 @@ function ContentStudio() {
           {/* ================= SECTION 8: TESTIMONIALS ================= */}
           {activeTab === 'testimonials' && (
             <div className="space-y-6">
-              <div className="border-b border-neutral-800 pb-4 flex items-center justify-between">
+              <div className="border-b border-neutral-800 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
-                  <h3 className="text-lg font-serif font-semibold text-white">
+                  <h3 className="text-base sm:text-lg font-serif font-semibold text-white">
                     Client Testimonials
                   </h3>
                   <p className="text-xs text-neutral-400 mt-1">
@@ -1238,7 +1191,7 @@ function ContentStudio() {
                 <button
                   onClick={handleSaveTestimonials}
                   disabled={isSaving}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-[#d4af37] text-black hover:bg-[#b8952a] transition-colors"
+                  className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-[#d4af37] text-black hover:bg-[#b8952a] transition-colors w-full sm:w-auto shrink-0 cursor-pointer"
                 >
                   <Save className="w-4 h-4" />
                   <span>{isSaving ? 'Saving...' : 'Save Testimonials'}</span>
@@ -1334,9 +1287,9 @@ function ContentStudio() {
           {/* ================= SECTION 9: PLANS ================= */}
           {activeTab === 'plans' && (
             <div className="space-y-6">
-              <div className="border-b border-neutral-800 pb-4 flex items-center justify-between">
+              <div className="border-b border-neutral-800 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
-                  <h3 className="text-lg font-serif font-semibold text-white">
+                  <h3 className="text-base sm:text-lg font-serif font-semibold text-white">
                     Consultation Plans & Tiers
                   </h3>
                   <p className="text-xs text-neutral-400 mt-1">
@@ -1346,7 +1299,7 @@ function ContentStudio() {
                 <button
                   onClick={handleSavePlans}
                   disabled={isSaving}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-[#d4af37] text-black hover:bg-[#b8952a] transition-colors"
+                  className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-[#d4af37] text-black hover:bg-[#b8952a] transition-colors w-full sm:w-auto shrink-0 cursor-pointer"
                 >
                   <Save className="w-4 h-4" />
                   <span>{isSaving ? 'Saving...' : 'Save Plans'}</span>
@@ -1431,9 +1384,9 @@ function ContentStudio() {
           {/* ================= SECTION 10: FOOTER & CONTACT ================= */}
           {activeTab === 'footer' && (
             <div className="space-y-6">
-              <div className="border-b border-neutral-800 pb-4 flex items-center justify-between">
+              <div className="border-b border-neutral-800 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
-                  <h3 className="text-lg font-serif font-semibold text-white">
+                  <h3 className="text-base sm:text-lg font-serif font-semibold text-white">
                     Footer & Contact Info
                   </h3>
                   <p className="text-xs text-neutral-400 mt-1">
@@ -1443,7 +1396,7 @@ function ContentStudio() {
                 <button
                   onClick={() => handleSaveSection('footer')}
                   disabled={isSaving}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-[#d4af37] text-black hover:bg-[#b8952a] transition-colors"
+                  className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-[#d4af37] text-black hover:bg-[#b8952a] transition-colors w-full sm:w-auto shrink-0 cursor-pointer"
                 >
                   <Save className="w-4 h-4" />
                   <span>{isSaving ? 'Publishing...' : 'Publish Changes'}</span>
@@ -1533,46 +1486,6 @@ function ContentStudio() {
               />
             </div>
           )}
-
-          {/* Bottom Section Navigator */}
-          <div className="pt-6 mt-8 border-t border-neutral-800/80 flex items-center justify-between">
-            {(() => {
-              const currentIdx = SECTIONS_NAV.findIndex((s) => s.id === activeTab);
-              const prevSec = currentIdx > 0 ? SECTIONS_NAV[currentIdx - 1] : null;
-              const nextSec =
-                currentIdx < SECTIONS_NAV.length - 1
-                  ? SECTIONS_NAV[currentIdx + 1]
-                  : null;
-
-              return (
-                <>
-                  {prevSec ? (
-                    <button
-                      type="button"
-                      onClick={() => handleTabChange(prevSec.id)}
-                      className="text-xs text-neutral-400 hover:text-neutral-200 transition-colors flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-neutral-800/50"
-                    >
-                      <span>← Previous: {prevSec.label}</span>
-                    </button>
-                  ) : (
-                    <div />
-                  )}
-
-                  {nextSec ? (
-                    <button
-                      type="button"
-                      onClick={() => handleTabChange(nextSec.id)}
-                      className="text-xs text-[#d4af37] hover:text-[#f5e6a3] transition-colors flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-[#d4af37]/10 font-medium"
-                    >
-                      <span>Next: {nextSec.label} →</span>
-                    </button>
-                  ) : (
-                    <div />
-                  )}
-                </>
-              );
-            })()}
-          </div>
         </div>
       </div>
     </div>

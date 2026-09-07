@@ -16,7 +16,7 @@ export const DEFAULT_SITE_SECTIONS: Record<string, SiteSectionContent> = {
     subtitle: 'Where Artistry meets Meaning',
     description:
       'Every piece we create begins with your story. Handcrafted with ethically sourced gemstones and timeless craft, jewellery that endures.',
-    image_url: '/hero.png',
+    image_url: '/Logo.png',
     data: {
       heading_line1: 'DESIGNED FOR',
       heading_line2: 'YOUR LEGACY',

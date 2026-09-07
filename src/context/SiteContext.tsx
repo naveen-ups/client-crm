@@ -25,6 +25,8 @@ interface SiteContextValue {
   isLoading: boolean;
   handleSignOut: () => Promise<void>;
   refreshSites: () => Promise<void>;
+  isMobileNavOpen: boolean;
+  setIsMobileNavOpen: (open: boolean) => void;
 }
 
 const SiteContext = createContext<SiteContextValue | undefined>(undefined);
@@ -33,6 +35,7 @@ export function SiteProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<UserSession | null>(null);
   const [activeSiteId, setActiveSiteId] = useState<string>('aurumm');
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState<boolean>(false);
   const [availableSites, setAvailableSites] = useState<SiteInfo[]>([
     { id: 'aurumm', name: 'Aurumm Fine Jewellery' },
   ]);
@@ -154,6 +157,8 @@ export function SiteProvider({ children }: { children: React.ReactNode }) {
         isLoading,
         handleSignOut,
         refreshSites: fetchSites,
+        isMobileNavOpen,
+        setIsMobileNavOpen,
       }}
     >
       {children}
