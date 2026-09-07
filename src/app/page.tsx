@@ -118,7 +118,7 @@ function ContentStudio() {
     }
   };
 
-  // Load from Supabase: checks single JSONB `websites` table first, then falls back
+  // Load from Supabase websites JSONB table
   useEffect(() => {
     async function loadRemoteContent() {
       if (!isSupabaseConfigured()) return;
@@ -132,8 +132,8 @@ function ContentStudio() {
           setAvailableSites(sitesList);
         }
 
-        // 1. Try single JSONB `websites` table
-        const { data: siteRecord } = await supabase
+        // Fetch single JSONB document from `websites` table
+        const { data: siteRecord, error } = await supabase
           .from('websites')
           .select('*')
           .eq('id', activeSiteId)
@@ -157,40 +157,7 @@ function ContentStudio() {
           if (c.testimonials && c.testimonials.length > 0)
             setTestimonials(c.testimonials);
           if (c.plans && c.plans.length > 0) setPlans(c.plans);
-          return;
         }
-
-        // 2. Fallback to legacy relational tables if websites table is not yet seeded
-        const [
-          secRes,
-          colRes,
-          custRes,
-          gemRes,
-          testRes,
-          planRes,
-        ] = await Promise.all([
-          supabase.from('site_content').select('*'),
-          supabase.from('collections').select('*').order('sort_order'),
-          supabase.from('custom_categories').select('*').order('sort_order'),
-          supabase.from('gemstones').select('*').order('sort_order'),
-          supabase.from('testimonials').select('*').order('sort_order'),
-          supabase.from('plans').select('*').order('sort_order'),
-        ]);
-
-        if (secRes.data && secRes.data.length > 0) {
-          const map = { ...DEFAULT_SITE_SECTIONS };
-          secRes.data.forEach((s) => {
-            map[s.id] = s;
-          });
-          setSections(map);
-        }
-        if (colRes.data && colRes.data.length > 0) setCollections(colRes.data);
-        if (custRes.data && custRes.data.length > 0)
-          setCustomCategories(custRes.data);
-        if (gemRes.data && gemRes.data.length > 0) setGemstones(gemRes.data);
-        if (testRes.data && testRes.data.length > 0)
-          setTestimonials(testRes.data);
-        if (planRes.data && planRes.data.length > 0) setPlans(planRes.data);
       } catch (err) {
         console.error('Error fetching Supabase content:', err);
       }
@@ -211,24 +178,8 @@ function ContentStudio() {
           [sectionId]: sectionData,
         };
 
-        // 1. Save to single JSONB `websites` table
+        // Save to single JSONB `websites` table
         await persistToWebsitesTable({ sections: updatedSections });
-
-        // 2. Backward compatibility: also sync to legacy site_content table
-        try {
-          await supabase.from('site_content').upsert({
-            id: sectionId,
-            section_name: sectionData.section_name,
-            title: sectionData.title,
-            subtitle: sectionData.subtitle,
-            description: sectionData.description,
-            image_url: sectionData.image_url,
-            data: sectionData.data,
-            updated_at: new Date().toISOString(),
-          });
-        } catch (legacyErr) {
-          // Ignore legacy table errors if migrated
-        }
       }
 
       setSaveSuccess(
@@ -248,18 +199,7 @@ function ContentStudio() {
     setSaveSuccess(null);
     try {
       if (isSupabaseConfigured()) {
-        // 1. Save to single JSONB websites table
         await persistToWebsitesTable({ collections });
-
-        // 2. Also sync to legacy table
-        try {
-          for (const col of collections) {
-            await supabase.from('collections').upsert({
-              ...col,
-              updated_at: new Date().toISOString(),
-            });
-          }
-        } catch (e) {}
       }
       setSaveSuccess('Shop Collections saved successfully!');
     } catch (err: any) {
@@ -276,14 +216,6 @@ function ContentStudio() {
     try {
       if (isSupabaseConfigured()) {
         await persistToWebsitesTable({ customCategories });
-        try {
-          for (const cat of customCategories) {
-            await supabase.from('custom_categories').upsert({
-              ...cat,
-              updated_at: new Date().toISOString(),
-            });
-          }
-        } catch (e) {}
       }
       setSaveSuccess('Custom Jewellery categories saved!');
     } catch (err: any) {
@@ -300,14 +232,6 @@ function ContentStudio() {
     try {
       if (isSupabaseConfigured()) {
         await persistToWebsitesTable({ gemstones });
-        try {
-          for (const gem of gemstones) {
-            await supabase.from('gemstones').upsert({
-              ...gem,
-              updated_at: new Date().toISOString(),
-            });
-          }
-        } catch (e) {}
       }
       setSaveSuccess('Gemstones showcase saved!');
     } catch (err: any) {
@@ -324,14 +248,6 @@ function ContentStudio() {
     try {
       if (isSupabaseConfigured()) {
         await persistToWebsitesTable({ testimonials });
-        try {
-          for (const t of testimonials) {
-            await supabase.from('testimonials').upsert({
-              ...t,
-              updated_at: new Date().toISOString(),
-            });
-          }
-        } catch (e) {}
       }
       setSaveSuccess('Client Testimonials saved!');
     } catch (err: any) {
@@ -348,14 +264,6 @@ function ContentStudio() {
     try {
       if (isSupabaseConfigured()) {
         await persistToWebsitesTable({ plans });
-        try {
-          for (const p of plans) {
-            await supabase.from('plans').upsert({
-              ...p,
-              updated_at: new Date().toISOString(),
-            });
-          }
-        } catch (e) {}
       }
       setSaveSuccess('Consultation Plans saved!');
     } catch (err: any) {

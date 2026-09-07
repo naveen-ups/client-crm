@@ -28,7 +28,7 @@ export async function GET(request: Request) {
   const siteId = searchParams.get('site') || 'aurumm';
 
   if (!supabase) {
-    // Return default content if Supabase is not configured yet
+    // Return default content if Supabase is not configured
     return NextResponse.json(
       {
         source: 'default',
@@ -51,7 +51,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    // 1. First priority: Check single multi-tenant `websites` table with JSONB
+    // Query single multi-tenant `websites` table with JSONB
     const { data: website, error: siteError } = await supabase
       .from('websites')
       .select('*')
@@ -82,69 +82,17 @@ export async function GET(request: Request) {
       );
     }
 
-    // 2. Fallback for backward compatibility: Legacy relational tables
-    const [
-      sectionsRes,
-      collectionsRes,
-      customCategoriesRes,
-      gemstonesRes,
-      testimonialsRes,
-      plansRes,
-    ] = await Promise.all([
-      supabase.from('site_content').select('*'),
-      supabase
-        .from('collections')
-        .select('*')
-        .eq('is_active', true)
-        .order('sort_order', { ascending: true }),
-      supabase
-        .from('custom_categories')
-        .select('*')
-        .eq('is_active', true)
-        .order('sort_order', { ascending: true }),
-      supabase
-        .from('gemstones')
-        .select('*')
-        .eq('is_active', true)
-        .order('sort_order', { ascending: true }),
-      supabase
-        .from('testimonials')
-        .select('*')
-        .eq('is_active', true)
-        .order('sort_order', { ascending: true }),
-      supabase
-        .from('plans')
-        .select('*')
-        .eq('is_active', true)
-        .order('sort_order', { ascending: true }),
-    ]);
-
-    // Format sections as map by id
-    const sectionsMap: Record<string, any> = { ...DEFAULT_SITE_SECTIONS };
-    if (sectionsRes.data && sectionsRes.data.length > 0) {
-      sectionsRes.data.forEach((item) => {
-        sectionsMap[item.id] = item;
-      });
-    }
-
+    // Fallback to default if requested site was not found
     return NextResponse.json(
       {
-        source: 'supabase_relational',
+        source: 'default',
         siteId,
-        sections: sectionsMap,
-        collections: collectionsRes.data?.length
-          ? collectionsRes.data
-          : DEFAULT_COLLECTIONS,
-        customCategories: customCategoriesRes.data?.length
-          ? customCategoriesRes.data
-          : DEFAULT_CUSTOM_CATEGORIES,
-        gemstones: gemstonesRes.data?.length
-          ? gemstonesRes.data
-          : DEFAULT_GEMSTONES,
-        testimonials: testimonialsRes.data?.length
-          ? testimonialsRes.data
-          : DEFAULT_TESTIMONIALS,
-        plans: plansRes.data?.length ? plansRes.data : DEFAULT_PLANS,
+        sections: DEFAULT_SITE_SECTIONS,
+        collections: DEFAULT_COLLECTIONS,
+        customCategories: DEFAULT_CUSTOM_CATEGORIES,
+        gemstones: DEFAULT_GEMSTONES,
+        testimonials: DEFAULT_TESTIMONIALS,
+        plans: DEFAULT_PLANS,
         updatedAt: new Date().toISOString(),
       },
       {
