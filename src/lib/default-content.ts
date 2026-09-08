@@ -50,7 +50,7 @@ export const DEFAULT_SITE_SECTIONS: Record<string, SiteSectionContent> = {
     subtitle: 'The Visionary',
     description:
       'With over a decade of dedicated expertise in gemology and high jewellery design, Pooja Roy envisions jewellery as wearable sacred art. Every commission is personally overseen from rough gem sourcing to final polish.',
-    image_url: '/Poojaroy.png',
+    image_url: '',
     data: {
       founder_name: 'Pooja Roy',
       founder_title: 'Founder & Master Gemologist',

@@ -458,7 +458,13 @@ function ContentStudio() {
                   })
                 }
                 folder="branding"
-                recommendedSize="Transparent PNG or SVG • e.g. 300x80px"
+                recommendedSize="Transparent PNG or SVG • e.g. 300 × 80px"
+                minWidth={120}
+                minHeight={30}
+                maxWidth={2500}
+                maxHeight={1200}
+                maxSizeMB={5}
+                helperText="Primary brand logo used in website navbar and sticky header."
               />
             </div>
           )}
@@ -580,6 +586,14 @@ function ContentStudio() {
                         setCollections(updated);
                       }}
                       folder="collections"
+                      aspectRatio="1:1"
+                      recommendedSize="1024 × 1024px (Square 1:1)"
+                      minWidth={400}
+                      minHeight={400}
+                      maxWidth={3000}
+                      maxHeight={3000}
+                      maxSizeMB={10}
+                      helperText="Square 1:1 image showcased in luxury collection cards."
                     />
                   </div>
                 ))}
@@ -702,6 +716,13 @@ function ContentStudio() {
                   })
                 }
                 folder="philosophy"
+                recommendedSize="680 × 680px (1:1 or 4:3)"
+                minWidth={400}
+                minHeight={400}
+                maxWidth={2500}
+                maxHeight={2500}
+                maxSizeMB={10}
+                helperText="High resolution image displayed in the 3D philosophy card."
               />
 
               {/* Stats cards editor */}
@@ -888,6 +909,14 @@ function ContentStudio() {
                   })
                 }
                 folder="founder"
+                aspectRatio="1:1"
+                recommendedSize="800 × 800px (Square 1:1)"
+                minWidth={300}
+                minHeight={300}
+                maxWidth={2500}
+                maxHeight={2500}
+                maxSizeMB={10}
+                helperText="Square 1:1 portrait photo for circular founder profile."
               />
             </div>
           )}
@@ -978,6 +1007,14 @@ function ContentStudio() {
                         setCustomCategories(updated);
                       }}
                       folder="custom-jewellery"
+                      aspectRatio="1:1"
+                      recommendedSize="1024 × 1024px (Square 1:1)"
+                      minWidth={400}
+                      minHeight={400}
+                      maxWidth={3000}
+                      maxHeight={3000}
+                      maxSizeMB={10}
+                      helperText="Square 1:1 high resolution photograph for bespoke service cards."
                     />
                   </div>
                 ))}
@@ -1061,6 +1098,14 @@ function ContentStudio() {
                     })
                   }
                   folder="heritage"
+                  aspectRatio="4:3"
+                  recommendedSize="1450 × 1080px (Landscape 4:3)"
+                  minWidth={400}
+                  minHeight={300}
+                  maxWidth={3000}
+                  maxHeight={2500}
+                  maxSizeMB={10}
+                  helperText="Landscape 4:3 photo of original heirloom before redesign."
                 />
                 <ImageUploader
                   label="After Image (Modern Custom Redesign)"
@@ -1078,6 +1123,14 @@ function ContentStudio() {
                     })
                   }
                   folder="heritage"
+                  aspectRatio="4:3"
+                  recommendedSize="1450 × 1080px (Landscape 4:3)"
+                  minWidth={400}
+                  minHeight={300}
+                  maxWidth={3000}
+                  maxHeight={2500}
+                  maxSizeMB={10}
+                  helperText="Landscape 4:3 photo of redesigned modern legacy piece."
                 />
               </div>
             </div>
@@ -1169,6 +1222,14 @@ function ContentStudio() {
                         setGemstones(updated);
                       }}
                       folder="gemstones"
+                      aspectRatio="1:1"
+                      recommendedSize="1024 × 1024px (Square 1:1)"
+                      minWidth={300}
+                      minHeight={300}
+                      maxWidth={2500}
+                      maxHeight={2500}
+                      maxSizeMB={10}
+                      helperText="Square 1:1 natural gemstone photo."
                     />
                   </div>
                 ))}
@@ -1277,6 +1338,14 @@ function ContentStudio() {
                         setTestimonials(updated);
                       }}
                       folder="testimonials"
+                      aspectRatio="1:1"
+                      recommendedSize="800 × 800px (Square 1:1)"
+                      minWidth={300}
+                      minHeight={300}
+                      maxWidth={2500}
+                      maxHeight={2500}
+                      maxSizeMB={10}
+                      helperText="Square 1:1 photograph of bespoke piece created for client."
                     />
                   </div>
                 ))}
@@ -1483,6 +1552,13 @@ function ContentStudio() {
                   })
                 }
                 folder="branding"
+                recommendedSize="Transparent PNG or SVG • e.g. 300 × 80px"
+                minWidth={120}
+                minHeight={30}
+                maxWidth={2500}
+                maxHeight={1200}
+                maxSizeMB={5}
+                helperText="Footer studio branding mark. Transparent PNG or SVG recommended."
               />
             </div>
           )}
