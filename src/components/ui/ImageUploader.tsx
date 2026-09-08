@@ -71,7 +71,6 @@ export function ImageUploader({
   const [detectedDimensions, setDetectedDimensions] = useState<DetectedImageInfo | null>(null);
   const [isDimensionValid, setIsDimensionValid] = useState<boolean | null>(null);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
-  const [fitMode, setFitMode] = useState<'contain' | 'cover'>('contain');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const friendlyRatio = useMemo(() => getFriendlyRatioLabel(aspectRatio), [aspectRatio]);
@@ -362,9 +361,7 @@ export function ImageUploader({
                 <img
                   src={value}
                   alt={label}
-                  className={`relative z-10 w-full h-full ${
-                    fitMode === 'contain' ? 'object-contain' : 'object-cover'
-                  } transition-all`}
+                  className="relative z-10 w-full h-full object-cover transition-all"
                   onError={(e) => {
                     (e.target as HTMLImageElement).src =
                       'https://placehold.co/200x200/18181b/d4af37?text=Preview';
@@ -417,17 +414,6 @@ export function ImageUploader({
 
                 {/* Action Buttons */}
                 <div className="flex items-center justify-center sm:justify-start gap-2.5 pt-1 flex-wrap">
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setFitMode(fitMode === 'contain' ? 'cover' : 'contain');
-                    }}
-                    className="text-[11px] text-neutral-400 hover:text-[#d4af37] flex items-center gap-1 cursor-pointer transition-colors"
-                    title="Toggle between Full view (contain) and Cropped view (cover)"
-                  >
-                    <span>Fit: {fitMode === 'contain' ? 'Full' : 'Crop'}</span>
-                  </button>
                   <a
                     href={value}
                     target="_blank"
